@@ -7,15 +7,18 @@
   Qwen's norms plus direct decoder-layer dispatch. It keeps native SDPA and
   `DynamicCache` behavior.
 - Repository-created submission: `f747a3b6-de62-42d1-a176-503f8bfff340`.
-- Official run: `defeefdc-f71b-4718-80f5-e8a94ae43ebb` (queued at this
-  entry). The public mode request was rejected; no v1 performance or
-  correctness result is available yet.
+- Official run: `defeefdc-f71b-4718-80f5-e8a94ae43ebb` succeeded. Score
+  216.94 tokens/s, rank 40. Public-shaped workload throughputs reported within
+  the official run were 44.6, 154.2, and 720.9 tokens/s. TTFT ratios were
+  0.89, 0.80, 0.78; TPOT ratios were 0.77, 0.67, 0.70. Full report is stored
+  under `agent/runs/` (ignored by Git).
 - Local checks: Python syntax compilation and `git diff --check` passed.
   Local Transformers and CUDA were unavailable, so there was no local model
   execution or token comparison.
-- A second candidate with fixed KV storage, explicit decode masking, and a
-  captured single-token CUDA graph is staged under `agent/candidates/graphed/`.
-  It is unvalidated and has not replaced the live engine.
+- The v1 source is archived under `agent/candidates/fused_native/`. A second
+  candidate with fixed KV storage, explicit decode masking, and a captured
+  single-token CUDA graph was promoted from `agent/candidates/graphed/` to
+  `engine/`. It has not been run remotely yet.
 
 ## Platform observations on 2026-09-19
 
