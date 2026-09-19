@@ -177,6 +177,9 @@ def plan_next_edit(history: list[dict]) -> str:
     for candidate in candidates:
         if candidate.get("disposition") in {"rejected", "withdrawn"}:
             continue
+        if candidate.get("disposition") == "awaiting_ingest":
+            return (f"Wait for platform ingestion of commit "
+                    f"{candidate.get('commitSha', '?')} ({candidate['id']}); {best_label}.")
         run_id = candidate.get("runId")
         if not run_id:
             return f"Stage {candidate['id']} from {candidate['path']}; {best_label}."

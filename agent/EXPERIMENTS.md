@@ -278,3 +278,33 @@ new experiment targets prefill only. It was copied to `engine/` while the
 separate grouped Tensor Core run remained measuring. Syntax, diff and package
 checks pass (seven source files, 8,116 bytes). Prefill numerical agreement and
 performance still require an official run.
+
+## Staged fused MLP on passing residual baseline
+
+`agent/candidates/fused_mlp_residual/` begins from the passing residual source,
+not from pending prefill or grouped Tensor Core variants. For decode batches up
+to 16, one Triton kernel reads each hidden-state tile once, performs separate
+BF16 gate and up weight dots with FP32 accumulators, rounds each projection to
+BF16, then computes BF16-rounded SiLU and product for the unchanged native
+down projection. It writes no gate/up activation tensors and concatenates no
+weights. Prefill and larger-batch behavior stay on the passing residual path.
+The residual engine, residual norm, decode fusion and GQA kernels are bytewise
+identical to the passing snapshot. Fixed tiles are BM16/BN64/BK64, four warps,
+two stages. Pinned Triton 3.1 source supports the BF16 `tl.dot` with FP32
+accumulator. Syntax, diff and package checks pass (eight source files, 8,309
+bytes). Custom GEMM summation differs from native and is a higher numerical
+risk; no GPU compile, token or performance result exists. The earlier V5-based
+fused MLP stage is withdrawn in the registry in favor of this independent
+residual-baseline experiment.
+
+## Prefill submission ingestion gap
+
+The prefill-plus-residual engine was pushed to GitHub main as commit
+`a9f4756d6cc4d476df7c620fd16e41884aa6a6b6`, but the Dryft platform had
+not created a submission after approximately three minutes. The repository UI
+showed auto deployment enabled and a check delivery for the earlier
+`477526d` push. This is an ingestion observation, not an engine run or
+performance result. The registry records the prefill commit as
+`awaiting_ingest` with no submission or run ID. A later legitimate metadata
+push may retrigger the repository hook; match any resulting submission's
+source commit before attributing it to this engine.

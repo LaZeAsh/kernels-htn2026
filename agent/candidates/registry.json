@@ -76,12 +76,21 @@
     {
       "id": "v7_fused_mlp",
       "path": "agent/candidates/fused_mlp",
-      "disposition": "unmeasured"
+      "disposition": "withdrawn"
     },
     {
       "id": "v8_prefill_residual_fused",
       "path": "engine",
-      "disposition": "active"
+      "disposition": "awaiting_ingest",
+      "commitSha": "a9f4756d6cc4d476df7c620fd16e41884aa6a6b6",
+      "submissionId": null,
+      "runId": null
+    },
+    {
+      "id": "v9_fused_mlp_residual",
+      "path": "agent/candidates/fused_mlp_residual",
+      "disposition": "unmeasured",
+      "numericalRisk": "higher: custom gate/up GEMM reduction order"
     }
   ]
 }
