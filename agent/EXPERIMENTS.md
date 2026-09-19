@@ -832,3 +832,23 @@ still needs official correctness and speed measurement.
 static source review found no bit or stride blocker; a GPU bit self-test,
 all-weight validation, and official correctness remain unrun. It is staged
 separately and not part of the live engine.
+
+## Flash prefill queued; autotuned MLP on current best live
+
+The Flash grouped GQA prefill candidate was accepted from actual source
+commit `c4bf8b495be921fa3444a04877fa22a90b33428f`, submission
+`30653b0f-997d-43bd-a292-e5d2c6a53ff4`, official run
+`5025ba67-5819-441f-bd93-bb8f032de6da`. It was queued when recorded;
+no result is attributed yet.
+
+The live engine is now `autotuned_fused_mlp_precise_qkv_cublaslt` on the
+passing 776.343294 tokens/s precise PV/QKV/cuBLASLt baseline. Relative to
+that source, only decode SwiGLU uses the staged split-K gate/up projection
+kernel for batches up to 16. Its four fixed tile choices and BF16 output
+boundaries are unchanged from the earlier staged version. The older non-Lt
+MLP stage is retained but withdrawn as superseded.
+
+`fused_lm_head_precise_qkv_cublaslt` is separately registered unmeasured at
+priority 30 on the same passing baseline. The older LM head stage on the
+745.470297 baseline is retained but withdrawn. Neither newly composed path
+has an official GPU result yet.

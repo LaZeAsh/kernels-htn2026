@@ -180,11 +180,22 @@
     },
     {
       "id": "v34_fused_prefill_gqa_precise_qkv_cublaslt",
-      "path": "engine",
-      "disposition": "active",
+      "path": "agent/candidates/fused_prefill_gqa_precise_qkv_cublaslt",
+      "disposition": "queued",
       "priority": 5,
       "reason": "Direct GQA Flash prefill only on passing 776.343294 precise PV/QKV/cuBLASLt baseline; decode and fused prefill projection source unchanged.",
-      "numericalRisk": "hidden correctness and latency interaction unmeasured"
+      "numericalRisk": "hidden correctness and latency interaction unmeasured",
+      "commitSha": "c4bf8b495be921fa3444a04877fa22a90b33428f",
+      "submissionId": "30653b0f-997d-43bd-a292-e5d2c6a53ff4",
+      "runId": "5025ba67-5819-441f-bd93-bb8f032de6da"
+    },
+    {
+      "id": "v36_autotuned_fused_mlp_precise_qkv_cublaslt",
+      "path": "engine",
+      "disposition": "active",
+      "priority": 25,
+      "reason": "Autotuned decode split SwiGLU on passing 776.343294 precise PV/QKV/cuBLASLt source; only MLP path changes.",
+      "numericalRisk": "custom GEMM reduction and autotune warmup unmeasured"
     },
     {
       "id": "v10_combined_tc_residual",
@@ -319,10 +330,11 @@
     {
       "id": "v28_autotuned_fused_mlp_precise_qkv",
       "path": "agent/candidates/autotuned_fused_mlp_precise_qkv",
-      "disposition": "unmeasured",
+      "disposition": "withdrawn",
       "priority": 25,
       "reason": "Autotuned split SwiGLU decode B<=16 on passing combined precise PV plus QKV baseline 769.789834; original BF16 boundaries, other paths unchanged.",
-      "numericalRisk": "custom gate/up GEMM reduction order and warmup autotune; hidden correctness, latency, and load budget unmeasured"
+      "numericalRisk": "custom gate/up GEMM reduction order and warmup autotune; hidden correctness, latency, and load budget unmeasured",
+      "withdrawalReason": "Superseded by v36 on passing 776.343294 cuBLASLt composition; source retained."
     },
     {
       "id": "v30_output_down_norm_precise_qkv",
@@ -346,10 +358,11 @@
     {
       "id": "v33_fused_lm_head_cublaslt",
       "path": "agent/candidates/fused_lm_head_cublaslt",
-      "disposition": "unmeasured",
+      "disposition": "withdrawn",
       "priority": 30,
       "reason": "Full-vocabulary fused LM head with two-level argmax on passing cuBLASLt QKV baseline; preserves BF16 logit boundary and min-index tie.",
-      "numericalRisk": "custom FP32 dot reduction, autotune warmup, and hidden correctness unmeasured"
+      "numericalRisk": "custom FP32 dot reduction, autotune warmup, and hidden correctness unmeasured",
+      "withdrawalReason": "Superseded by v37 on passing 776.343294 precise PV plus QKV cuBLASLt composition; source retained."
     },
     {
       "id": "v35_lossless_mlp_precise_qkv",
@@ -358,6 +371,14 @@
       "priority": 80,
       "reason": "Lossless decode MLP kernel staged on passing precise PV plus QKV baseline; Luna static review found no bit or stride blocker.",
       "numericalRisk": "GPU bit self-test, all-weight validation, official correctness and speed not yet run"
+    },
+    {
+      "id": "v37_fused_lm_head_precise_qkv_cublaslt",
+      "path": "agent/candidates/fused_lm_head_precise_qkv_cublaslt",
+      "disposition": "unmeasured",
+      "priority": 30,
+      "reason": "Full-vocabulary fused LM head and two-level argmax on passing 776.343294 precise PV/QKV/cuBLASLt source.",
+      "numericalRisk": "custom full-vocabulary FP32 dot, BF16 logit boundary and autotune unmeasured"
     }
   ]
 }

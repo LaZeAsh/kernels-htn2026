@@ -8,6 +8,7 @@ from transformers import AutoModelForCausalLM
 
 from kernels.rmsnorm import rms_norm
 from kernels.residual_norm import add_norm
+from kernels.lm_head import fused_lm_argmax
 from attention import install_direct_gqa
 
 
@@ -106,6 +107,8 @@ def _decode_last(model, token_ids, cache, positions):
             after_attention, mlp_output,
             next_norm.weight, next_norm.variance_epsilon,
         )
+    if token_ids.shape[0] <= 16:
+        return fused_lm_argmax(normalized, model.lm_head.weight)
     return model.lm_head(normalized).argmax(-1)
 
 
