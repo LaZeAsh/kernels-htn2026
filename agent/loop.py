@@ -175,6 +175,8 @@ def plan_next_edit(history: list[dict]) -> str:
                   f"at {best['commitSha'][:8]}" if best else "no ranked result yet")
 
     for candidate in candidates:
+        if candidate.get("disposition") in {"rejected", "withdrawn"}:
+            continue
         run_id = candidate.get("runId")
         if not run_id:
             return f"Stage {candidate['id']} from {candidate['path']}; {best_label}."

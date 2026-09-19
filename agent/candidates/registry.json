@@ -5,22 +5,38 @@
       "path": "agent/candidates/fused_native",
       "commitSha": "1dfba6ca9d5dbcf108ce4497a65dc8ab2e6724ba",
       "submissionId": "f747a3b6-de62-42d1-a176-503f8bfff340",
-      "runId": "defeefdc-f71b-4718-80f5-e8a94ae43ebb"
+      "runId": "defeefdc-f71b-4718-80f5-e8a94ae43ebb",
+      "disposition": "active"
     },
     {
       "id": "v2_graph",
       "path": "agent/candidates/graphed",
       "commitSha": "d664f2a35dea36a86a13a529b81b393e3941a7a2",
       "submissionId": "57acbad3-afe6-4091-bdfc-d8e4e4ba9516",
-      "runId": "1e88deb4-e94c-4e51-b029-ec8aa04561ee"
+      "runId": "1e88deb4-e94c-4e51-b029-ec8aa04561ee",
+      "disposition": "active"
     },
     {
       "id": "v3_packed",
-      "path": "engine"
+      "path": "agent/candidates/packed",
+      "commitSha": "790d02580d70dcfae8b550c64dbd62800d929a9f",
+      "runId": "f449f653-e897-4aaf-bdb3-161852793b18",
+      "disposition": "rejected"
     },
     {
-      "id": "v4_gqa",
-      "path": "agent/candidates/gqa"
+      "id": "v4_gqa_packed_unvalidated",
+      "path": "agent/candidates/gqa",
+      "disposition": "withdrawn"
+    },
+    {
+      "id": "v5_fused_decode",
+      "path": "agent/candidates/fused_decode",
+      "disposition": "withdrawn"
+    },
+    {
+      "id": "v4_gqa_native",
+      "path": "engine",
+      "disposition": "active"
     }
   ]
 }

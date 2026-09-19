@@ -101,3 +101,37 @@ ranked official score using the run's own `commitSha`.
 After V2 passed, the packed-projection candidate was copied to `engine/` for
 its own official run. The V2 graph source remains at
 `agent/candidates/graphed/`. V4 direct GQA remains staged and unmeasured.
+
+## Staged V5: decode elementwise fusion
+
+`agent/candidates/fused_decode/` inherits V4 packed projections and direct
+GQA. Decode now fuses per-head Q/K RMSNorm, RoPE and the K/V cache write in one
+Triton kernel. It normalizes FP32, casts to BF16 before multiplying the gain,
+rounds that result to BF16, rounds each RoPE product to BF16, then adds and
+rounds to BF16. FMA fusion is disabled. The V value is copied unchanged from
+the BF16 packed projection. A second decode-only kernel computes SiLU in FP32,
+rounds it to BF16, multiplies the BF16 up projection, and rounds the product
+to BF16. Prefill, including a one-token prompt, uses the original packed
+projection, norm, RoPE, cache-update, native SDPA and activation paths.
+
+The V5 archive has six source files and is 6,862 bytes. Syntax, diff and
+package checks pass. No CUDA compiler, numerical comparison or benchmark run
+was available locally; neither V4 nor V5 should be treated as validated.
+
+## V3 failed; native-projection GQA staged
+
+V3 packed projections at commit `790d02580d70dcfae8b550c64dbd62800d929a9f`
+failed official run `f449f653-e897-4aaf-bdb3-161852793b18` with
+`incorrect_output` on a hidden workload. All public-shaped cases passed and
+TPOT improved only slightly (7.046, 15.182, 16.093 ms versus V2's 7.425,
+15.365, 16.332 ms). The hidden report does not localize the bad token, so no
+specific operation is proven responsible. Best ranked result remains V2 at
+346.677 tokens/s. The failed source is preserved at `agent/candidates/packed/`.
+
+A new `agent/candidates/gqa_native/` starts from passing V2. It retains the
+original separate Q/K/V and gate/up projections and native causal SDPA
+prefill. Only cached decode attention changes to direct full-context GQA. It
+was copied into `engine/` for the next official run. Static syntax, diff and
+package checks pass (five source files, 5,397-byte archive). No GPU result is
+available yet. The earlier packed V4/V5 candidates remain staged but are not
+on this correctness baseline.

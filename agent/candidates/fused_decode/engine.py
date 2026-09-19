@@ -7,7 +7,7 @@ import torch
 from transformers import AutoModelForCausalLM
 
 from kernels.rmsnorm import rms_norm
-from attention import install_direct_gqa
+from packed import pack_layer
 
 
 class FusedRMSNorm(torch.nn.Module):
@@ -89,7 +89,7 @@ class Engine:
             layer.post_attention_layernorm = FusedRMSNorm(layer.post_attention_layernorm)
             layer.self_attn.q_norm = FusedRMSNorm(layer.self_attn.q_norm)
             layer.self_attn.k_norm = FusedRMSNorm(layer.self_attn.k_norm)
-            install_direct_gqa(layer)
+            pack_layer(layer)
         self._graph_shape = None
         self._cache = None
         self._graph = None
@@ -100,7 +100,7 @@ class Engine:
             return
         config = self.model.config
         heads = config.num_key_value_heads
-        head_dim = self.model.model.layers[0].self_attn.k_proj.out_features // heads
+        head_dim = self.model.model.layers[0].self_attn.head_dim
         self._cache = FixedCache(
             len(self.model.model.layers), batch, heads,
             prompt_length + output_length, head_dim,
@@ -138,8 +138,12 @@ class Engine:
         positions = torch.arange(prompt_length, device="cuda:0")
         with torch.inference_mode():
             self._cache.prefill_mode = True
+            for layer in self.model.model.layers:
+                layer.mlp.decode_mode = False
             current = _forward_last(self.model, prompt, self._cache, positions, None)
             self._cache.prefill_mode = False
+            for layer in self.model.model.layers:
+                layer.mlp.decode_mode = True
             yield current[:, 0].tolist()
             if max_new_tokens == 1:
                 return
