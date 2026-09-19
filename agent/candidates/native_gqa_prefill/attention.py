@@ -1,6 +1,7 @@
 """Native projections with fused prefill and direct full-context GQA decode."""
 
 import types
+import torch.nn.functional as F
 
 from kernels.decode_fusion import qk_norm_rope_cache, prefill_qk_norm_rope_cache, swiglu
 from transformers.models.qwen3.modeling_qwen3 import (
@@ -51,13 +52,12 @@ def _attention_forward(
             past_key_value.prefill_length = length
         key_states = past_key_value.keys[self.layer_idx][:, :, :length, :]
         value_states = past_key_value.values[self.layer_idx][:, :, :length, :]
-        attention_interface = ALL_ATTENTION_FUNCTIONS[self.config._attn_implementation]
-        attn_output, attn_weights = attention_interface(
-            self, query_states, key_states, value_states, attention_mask,
-            dropout=0.0 if not self.training else self.attention_dropout,
-            scaling=self.scaling, sliding_window=self.sliding_window,
-            **kwargs,
-        )
+        attn_output = F.scaled_dot_product_attention(
+            query_states, key_states, value_states,
+            attn_mask=None, dropout_p=0.0, is_causal=length > 1,
+            scale=self.scaling, enable_gqa=True,
+        ).transpose(1, 2).contiguous()
+        attn_weights = None
     else:
         query_states = self.q_norm(self.q_proj(hidden_states).view(hidden_shape)).transpose(1, 2)
         key_states = self.k_norm(self.k_proj(hidden_states).view(hidden_shape)).transpose(1, 2)

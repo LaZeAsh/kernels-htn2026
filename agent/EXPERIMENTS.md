@@ -429,3 +429,65 @@ passing 709.857148 tokens/s grouped attention baseline. It changes the
 decode gate/up projection schedule while preserving native prefill and native
 Q/K/V projections. It does not include the queued QKV or combined changes.
 The custom reduction remains unmeasured and numerically higher risk.
+
+## MLP split submission queued
+
+The independent MLP split candidate was accepted from actual source commit
+`efa8cea5061e84154011b5ee2f796c35ab130560` as submission
+`1413e9db-7f80-4e8d-b3f7-dbf50eb2bccc`, official run
+`51f47141-bdad-4c85-8666-a72590bc6a64`. It was queued when recorded;
+no correctness or performance result is attributed yet. The live engine source
+is unchanged. The combined run is measuring and the QKV split run is queued.
+
+## Combined candidate failed hidden correctness
+
+The grouped GQA plus prefill/residual candidate failed official run
+`b4768620-111c-41ae-8330-8984b2e7dc15` at source commit
+`587f4410734c23806f81d7de44013c141ee9f373` with `incorrect_output`.
+All three public workloads passed, with TTFT 15.814, 130.190 and 121.320 ms
+and TPOT 4.917, 5.854 and 5.849 ms. The hidden workload failed before a
+ranked score was reported. Preserve the report and do not retry this unchanged
+combination. Grouped GQA alone remains best at 709.857148 tokens/s.
+
+Static source comparison found the expected integration only: the passing
+prefill/residual attention adapter substitutes the passing grouped GQA decode
+call, and the grouped kernel is bytewise identical to the passing V7 source.
+The prefill, engine loop and residual kernels match passing prefill/residual
+source. No obvious source integration bug was found; the hidden numerical
+interaction is unresolved. `combined_tc_residual` is reactivated as the next
+unmeasured isolation candidate without prefill fusion. `native_gqa_prefill`
+was staged from the failed combined candidate, so it is withdrawn pending a
+rebase. QKV split and MLP split remain independent queued experiments.
+
+## Decision helper ordering and passing-base prefill stage
+
+The decision helper now checks accepted pending runs and platform ingestion
+before suggesting any unmeasured stage, regardless of registry order. Terminal
+failure review still precedes new staging. A synthetic case with an earlier
+unmeasured candidate and later pending run returned the pending-run wait;
+current history also waits for QKV split rather than suggesting residual
+combination. This change does not submit or edit an engine.
+
+`agent/candidates/native_gqa_prefill_base/` is registered as a separate
+unmeasured stage based on passing grouped GQA V7. The earlier
+`native_gqa_prefill` stage based on the failed combined candidate remains
+withdrawn. Neither prefill stage is live.
+
+## QKV split passed; precise PV isolation promoted
+
+QKV split passed and ranked in official run
+`27d7715d-f2ac-48a3-9275-db1c25e0845e` at source commit
+`575d1f9174b25de287fadb2ff839fd71abee6073`, scoring 745.470297
+tokens/s, the new best. Public TPOT was 4.716, 5.363 and 5.492 ms.
+The separate MLP split submission is queued and should proceed independently.
+
+`combined_precise_pv` is now live as a targeted retry of the failed combined
+prefill/residual plus grouped GQA candidate. Bytewise source comparison shows
+only one kernel change: the PV operation uses a high BF16 probability term and
+an additional BF16 residual term in a second Tensor Core dot. This tests
+whether probability rounding caused the hidden correctness failure. The
+prefill, residual, attention adapter and all other source are identical to
+the rejected candidate. Its correctness and speed are unmeasured; the second
+PV dot costs work. `combined_tc_residual` remains staged as the next isolation
+candidate if this fix fails, with no prefill fusion. The independent
+`autotuned_mlp_linear` stage on passing grouped GQA V7 is also unmeasured.

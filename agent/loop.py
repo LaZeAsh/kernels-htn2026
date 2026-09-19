@@ -174,6 +174,8 @@ def plan_next_edit(history: list[dict]) -> str:
     best_label = (f"best ranked {best['result']['score']:.2f} tok/s "
                   f"at {best['commitSha'][:8]}" if best else "no ranked result yet")
 
+    # Accepted work takes precedence over a staged experiment, regardless of
+    # registry ordering. A missing detail file still means the run is pending.
     for candidate in candidates:
         if candidate.get("disposition") in {"rejected", "withdrawn"}:
             continue
@@ -181,11 +183,16 @@ def plan_next_edit(history: list[dict]) -> str:
             return (f"Wait for platform ingestion of commit "
                     f"{candidate.get('commitSha', '?')} ({candidate['id']}); {best_label}.")
         run_id = candidate.get("runId")
-        if not run_id:
-            return f"Stage {candidate['id']} from {candidate['path']}; {best_label}."
-        detail = by_id.get(run_id)
-        if detail is None or detail.get("state") not in terminal:
+        if run_id and (run_id not in by_id or by_id[run_id].get("state") not in terminal):
             return f"Wait for existing run {run_id} ({candidate['id']}); {best_label}."
+
+    for candidate in candidates:
+        if candidate.get("disposition") in {"rejected", "withdrawn"}:
+            continue
+        run_id = candidate.get("runId")
+        if not run_id:
+            continue
+        detail = by_id.get(run_id)
         result = detail.get("result") or {}
         code = result.get("failureCode") or detail.get("errorCode")
         if detail.get("state") == "infra_error" or code in {
@@ -198,6 +205,9 @@ def plan_next_edit(history: list[dict]) -> str:
             return f"Review {candidate['id']} {code} before another experiment; {best_label}."
         if detail.get("state") != "succeeded" or result.get("ranked") is not True:
             return f"Review {candidate['id']} run {run_id} ({code or detail.get('state')}); {best_label}."
+    for candidate in candidates:
+        if candidate.get("disposition") not in {"rejected", "withdrawn"} and not candidate.get("runId"):
+            return f"Stage {candidate['id']} from {candidate['path']}; {best_label}."
     return f"All registered candidates measured; {best_label}."
 
 

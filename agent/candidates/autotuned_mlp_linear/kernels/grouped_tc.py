@@ -42,11 +42,7 @@ def _grouped_partial(Q, K, V, POS, OUT, PM, PL, PA,
             alpha = tl.exp(maximum - new_maximum)
             probabilities = tl.exp(scores - new_maximum[:, None])
             v = tl.load(V + kv_offset, mask=valid[:, None], other=0)
-            # Two BF16 terms retain the probability's low bits for the PV MMA.
-            p_hi = probabilities.to(tl.bfloat16)
-            p_lo = (probabilities - p_hi.to(tl.float32)).to(tl.bfloat16)
-            pv = tl.dot(p_hi, v, out_dtype=tl.float32)
-            pv = tl.dot(p_lo, v, pv)
+            pv = tl.dot(probabilities.to(tl.bfloat16), v, out_dtype=tl.float32)
             accumulator = accumulator * alpha[:, None] + pv
             denominator = denominator * alpha + tl.sum(probabilities, 1)
             maximum = new_maximum

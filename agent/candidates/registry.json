@@ -104,33 +104,67 @@
       "rejectionReason": "No speed gain over passing residual baseline (517.746928 tokens/s); public TPOT also slightly worse."
     },
     {
+      "id": "v16_combined_precise_pv",
+      "path": "engine",
+      "disposition": "active",
+      "reason": "Targeted fix of rejected v11: two BF16 probability terms in PV dot; all other source identical. Tests rounding hypothesis.",
+      "numericalRisk": "unmeasured hidden correctness and speed; two PV tensor-core dots"
+    },
+    {
       "id": "v10_combined_tc_residual",
       "path": "agent/candidates/combined_tc_residual",
-      "disposition": "withdrawn",
-      "withdrawalReason": "superseded by v11_combined_tc_prefill_residual after prefill passed"
+      "disposition": "unmeasured",
+      "reason": "Postponed isolation candidate if precise PV fix fails; passing grouped TC plus residual fusion, without prefill fusion."
     },
     {
       "id": "v11_combined_tc_prefill_residual",
       "path": "agent/candidates/combined_tc_prefill_residual",
-      "disposition": "validating",
+      "disposition": "rejected",
       "commitSha": "587f4410734c23806f81d7de44013c141ee9f373",
       "submissionId": "a048e10e-1516-455d-8df7-64708351daa2",
-      "runId": "b4768620-111c-41ae-8330-8984b2e7dc15"
+      "runId": "b4768620-111c-41ae-8330-8984b2e7dc15",
+      "resultStatus": "failed",
+      "failureCode": "incorrect_output",
+      "ranked": false,
+      "rejectionReason": "Official hidden correctness failure; all public workloads passed. Do not retry unchanged."
     },
     {
       "id": "v12_qkv_split_fused",
       "path": "agent/candidates/qkv_split_fused",
-      "disposition": "queued",
-      "numericalRisk": "high: custom QKV projection GEMM; indexing reviewed, GPU result absent",
+      "disposition": "passed",
+      "numericalRisk": "custom QKV projection validated by official run",
       "commitSha": "575d1f9174b25de287fadb2ff839fd71abee6073",
       "runId": "27d7715d-f2ac-48a3-9275-db1c25e0845e",
-      "submissionId": "9f529391-880f-4259-9bb1-72391c70b685"
+      "submissionId": "9f529391-880f-4259-9bb1-72391c70b685",
+      "ranked": true,
+      "scoreTokensPerSecond": 745.4702967545182
     },
     {
       "id": "v13_mlp_split_fused",
-      "path": "engine",
-      "disposition": "active",
-      "numericalRisk": "higher: custom decode gate/up GEMM tiling and BF16 reduction order; based on passed v7 grouped TC, native prefill"
+      "path": "agent/candidates/mlp_split_fused",
+      "disposition": "queued",
+      "numericalRisk": "higher: custom decode gate/up GEMM tiling and BF16 reduction order; based on passed v7 grouped TC, native prefill",
+      "commitSha": "efa8cea5061e84154011b5ee2f796c35ab130560",
+      "runId": "51f47141-bdad-4c85-8666-a72590bc6a64",
+      "submissionId": "1413e9db-7f80-4e8d-b3f7-dbf50eb2bccc"
+    },
+    {
+      "id": "v14_native_gqa_prefill",
+      "path": "agent/candidates/native_gqa_prefill",
+      "disposition": "withdrawn",
+      "withdrawalReason": "Based on failed v11 combined candidate; requires rebase onto passing source before measurement."
+    },
+    {
+      "id": "v15_native_gqa_prefill_base",
+      "path": "agent/candidates/native_gqa_prefill_base",
+      "disposition": "unmeasured",
+      "reason": "Passing v7 grouped TC base; independent native GQA prefill experiment."
+    },
+    {
+      "id": "v17_autotuned_mlp_linear",
+      "path": "agent/candidates/autotuned_mlp_linear",
+      "disposition": "unmeasured",
+      "reason": "Independent decode MLP linear scheduling experiment based on passed v7 grouped TC."
     }
   ]
 }

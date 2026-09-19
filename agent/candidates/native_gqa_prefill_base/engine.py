@@ -4,10 +4,10 @@ Copy this directory's contents to submission root only after public validation.
 """
 
 import torch
+from torch.nn.attention import SDPBackend, sdpa_kernel
 from transformers import AutoModelForCausalLM
 
 from kernels.rmsnorm import rms_norm
-from kernels.residual_norm import add_norm
 from attention import install_direct_gqa
 
 
@@ -75,40 +75,6 @@ def _forward_last(model, token_ids, cache, positions, attention_mask):
     return model.lm_head(base.norm(hidden[:, -1:, :])).argmax(-1)
 
 
-@torch.inference_mode()
-def _decode_last(model, token_ids, cache, positions):
-    """Single-token path carries each layer's residual and normalized input."""
-    base = model.model
-    residual = base.embed_tokens(token_ids)
-    position_ids = positions.unsqueeze(0)
-    position_embeddings = base.rotary_emb(residual, position_ids)
-    normalized = base.layers[0].input_layernorm(residual)
-    layers = base.layers
-    for index, layer in enumerate(layers):
-        attention_output = layer.self_attn(
-            normalized,
-            position_embeddings=position_embeddings,
-            attention_mask=None,
-            past_key_value=cache,
-            cache_position=positions,
-        )[0]
-        after_attention, mlp_input = add_norm(
-            residual, attention_output,
-            layer.post_attention_layernorm.weight,
-            layer.post_attention_layernorm.variance_epsilon,
-        )
-        mlp_output = layer.mlp(mlp_input)
-        if index + 1 < len(layers):
-            next_norm = layers[index + 1].input_layernorm
-        else:
-            next_norm = base.norm
-        residual, normalized = add_norm(
-            after_attention, mlp_output,
-            next_norm.weight, next_norm.variance_epsilon,
-        )
-    return model.lm_head(normalized).argmax(-1)
-
-
 class Engine:
     def __init__(self, model_path: str) -> None:
         torch.backends.cuda.matmul.allow_tf32 = False
@@ -146,7 +112,9 @@ class Engine:
         self._graph = None
 
     def _decode(self):
-        return _decode_last(self.model, self._input, self._cache, self._position)
+        return _forward_last(
+            self.model, self._input, self._cache, self._position, None
+        )
 
     def _capture(self, token, position):
         stream = torch.cuda.Stream()
@@ -173,7 +141,8 @@ class Engine:
             self._cache.prefill_mode = True
             for layer in self.model.model.layers:
                 layer.mlp.decode_mode = False
-            current = _forward_last(self.model, prompt, self._cache, positions, None)
+            with sdpa_kernel(SDPBackend.FLASH_ATTENTION):
+                current = _forward_last(self.model, prompt, self._cache, positions, None)
             self._cache.prefill_mode = False
             for layer in self.model.model.layers:
                 layer.mlp.decode_mode = True
