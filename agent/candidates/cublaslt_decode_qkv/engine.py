@@ -4,7 +4,6 @@ Copy this directory's contents to submission root only after public validation.
 """
 
 import torch
-from torch.nn.attention import SDPBackend, sdpa_kernel
 from transformers import AutoModelForCausalLM
 
 from kernels.rmsnorm import rms_norm
@@ -117,16 +116,21 @@ class Engine:
         )
 
     def _capture(self, token, position):
-        stream = torch.cuda.Stream()
-        stream.wait_stream(torch.cuda.current_stream())
-        with torch.cuda.stream(stream):
-            self._input.copy_(token)
-            self._position.fill_(position)
-            self._decode()  # warm kernels and allocator on the capture stream
-            graph = torch.cuda.CUDAGraph()
-            with torch.cuda.graph(graph):
-                output = self._decode()
-        torch.cuda.current_stream().wait_stream(stream)
+        previous_blas = torch.backends.cuda.preferred_blas_library()
+        try:
+            torch.backends.cuda.preferred_blas_library("cublaslt")
+            stream = torch.cuda.Stream()
+            stream.wait_stream(torch.cuda.current_stream())
+            with torch.cuda.stream(stream):
+                self._input.copy_(token)
+                self._position.fill_(position)
+                self._decode()  # warm kernels and allocator on the capture stream
+                graph = torch.cuda.CUDAGraph()
+                with torch.cuda.graph(graph):
+                    output = self._decode()
+            torch.cuda.current_stream().wait_stream(stream)
+        finally:
+            torch.backends.cuda.preferred_blas_library(previous_blas)
         self._graph = graph
         self._graph_output = output
 
@@ -141,8 +145,7 @@ class Engine:
             self._cache.prefill_mode = True
             for layer in self.model.model.layers:
                 layer.mlp.decode_mode = False
-            with sdpa_kernel(SDPBackend.FLASH_ATTENTION):
-                current = _forward_last(self.model, prompt, self._cache, positions, None)
+            current = _forward_last(self.model, prompt, self._cache, positions, None)
             self._cache.prefill_mode = False
             for layer in self.model.model.layers:
                 layer.mlp.decode_mode = True

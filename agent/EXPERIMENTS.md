@@ -540,3 +540,57 @@ adapter dispatch and passing QKV split kernel were added. The precise PV
 kernel and prefill/residual engine path are bytewise unchanged. Their
 interaction remains unmeasured, so neither passing result is attributed to
 this combined engine. The GQA scheduling variant is kept separate.
+
+## Combined queued; native prefill rebase and output projection review
+
+The precise PV plus QKV candidate was accepted at actual source commit
+`4e52c3831ad2bd45b5605304effbdcf7b756efd0` as submission
+`e503080a-2c33-48b9-ba11-372774648bd4`, official run
+`fa4fba3d-2bae-4b98-a285-06ce21f5bb90`. It was queued when recorded,
+with no correctness or score yet. `native_gqa_prefill_qkv` is registered as an
+unmeasured native GQA prefill experiment based on the passing 745.470297
+QKV source. The older 709.857148-base stage is withdrawn as superseded.
+
+Static review of `output_proj_fused` found aligned split sizes for both
+4096-column attention output and 9728-column MLP intermediate: each divides
+into four 64-wide K tiles. The 40 output tiles cover 2560 columns, row masks
+cover batches 1 through 16, and the wrapper falls back to the native layer
+for prefill, sequence length other than one, or batch above 16. The reducer
+casts the projected sum to BF16 before adding the BF16 residual, matching the
+native operation boundary. The four-way FP32 reduction changes sum order,
+so hidden token correctness remains a real risk despite these checks.
+
+The stage currently changes both `o_proj` and `down_proj` in each decode
+layer. Two separate variants (attention output only, then MLP down only) would
+provide more actionable correctness and latency evidence if either path is
+tested. This is a recommendation; no stage source or live engine changed.
+
+## Output projection paths isolated
+
+Two independent stages are archived from `output_proj_fused`, both based on
+passing QKV split. `output_o_fused` uses the custom split-K projection and
+BF16 residual add only for attention `o_proj`; its MLP path calls the passing
+native `mlp.forward` and adds the BF16 output to the residual. Conversely,
+`output_down_fused` keeps native attention `o_proj` and residual addition and
+uses the custom projection only for MLP `down_proj`. Both preserve native
+prefill through the original layer forward and use the same decode batch
+fallback above 16. The original both-projection stage is retained but
+withdrawn from the next experiment sequence for clearer failure isolation.
+Neither separate stage has GPU correctness or speed evidence.
+
+## Native GQA prefill on QKV baseline promoted
+
+The precise PV plus QKV combination remains queued under submission
+`e503080a-2c33-48b9-ba11-372774648bd4`, run
+`fa4fba3d-2bae-4b98-a285-06ce21f5bb90`, source commit
+`4e52c3831ad2bd45b5605304effbdcf7b756efd0`. No result is attributed
+to it yet.
+
+The live engine is now `native_gqa_prefill_qkv`, based on the passing QKV
+split result at 745.470297 tokens/s. Its decode source is bytewise the
+passing baseline. The prefill adapter calls PyTorch scaled dot product
+attention with `enable_gqa=True`, and prefill is run under a Flash-only SDPA
+context. The original native projections, Q/K norm, RoPE and cache updates
+remain. This changes prefill attention arithmetic and must pass its own
+hidden correctness and latency gates. `cublaslt_decode_qkv` is separately
+registered as an unmeasured decode projection experiment.

@@ -126,10 +126,13 @@
     },
     {
       "id": "v20_combined_precise_qkv",
-      "path": "engine",
-      "disposition": "active",
+      "path": "agent/candidates/combined_precise_qkv",
+      "disposition": "queued",
       "reason": "Combine passing precise PV 720.684 candidate with passing QKV split 745.470 decode projection only; interaction unmeasured.",
-      "numericalRisk": "combined changes unmeasured on hidden workloads"
+      "numericalRisk": "combined changes unmeasured on hidden workloads",
+      "commitSha": "4e52c3831ad2bd45b5605304effbdcf7b756efd0",
+      "submissionId": "e503080a-2c33-48b9-ba11-372774648bd4",
+      "runId": "fa4fba3d-2bae-4b98-a285-06ce21f5bb90"
     },
     {
       "id": "v10_combined_tc_residual",
@@ -182,8 +185,9 @@
     {
       "id": "v15_native_gqa_prefill_base",
       "path": "agent/candidates/native_gqa_prefill_base",
-      "disposition": "unmeasured",
-      "reason": "Passing v7 grouped TC base; independent native GQA prefill experiment."
+      "disposition": "withdrawn",
+      "reason": "Passing v7 grouped TC base; independent native GQA prefill experiment.",
+      "withdrawalReason": "Superseded by QKV-base v21_native_gqa_prefill_qkv; same native GQA prefill change rebased onto best passing source."
     },
     {
       "id": "v17_autotuned_mlp_linear",
@@ -194,8 +198,33 @@
     {
       "id": "v19_output_proj_fused",
       "path": "agent/candidates/output_proj_fused",
+      "disposition": "withdrawn",
+      "numericalRisk": "custom decode output projection reduction order; based on passing QKV baseline",
+      "withdrawalReason": "Superseded for isolation by separate o_proj-only and down_proj-only stages; both-projection source retained."
+    },
+    {
+      "id": "v21_native_gqa_prefill_qkv",
+      "path": "engine",
+      "disposition": "active",
+      "reason": "Native GQA prefill on passing QKV split baseline 745.470; supersedes v15 on older 709.857 base."
+    },
+    {
+      "id": "v22_output_o_fused",
+      "path": "agent/candidates/output_o_fused",
       "disposition": "unmeasured",
-      "numericalRisk": "custom decode output projection reduction order; based on passing QKV baseline"
+      "numericalRisk": "custom split-K attention output projection only; passing QKV base for other path"
+    },
+    {
+      "id": "v23_output_down_fused",
+      "path": "agent/candidates/output_down_fused",
+      "disposition": "unmeasured",
+      "numericalRisk": "custom split-K MLP down projection only; passing QKV base for other path"
+    },
+    {
+      "id": "v24_cublaslt_decode_qkv",
+      "path": "agent/candidates/cublaslt_decode_qkv",
+      "disposition": "unmeasured",
+      "reason": "Native cuBLASLt decode QKV GEMMs on passing QKV baseline; independent projection experiment."
     }
   ]
 }

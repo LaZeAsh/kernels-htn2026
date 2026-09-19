@@ -4,7 +4,6 @@ Copy this directory's contents to submission root only after public validation.
 """
 
 import torch
-from torch.nn.attention import SDPBackend, sdpa_kernel
 from transformers import AutoModelForCausalLM
 
 from kernels.rmsnorm import rms_norm
@@ -141,8 +140,7 @@ class Engine:
             self._cache.prefill_mode = True
             for layer in self.model.model.layers:
                 layer.mlp.decode_mode = False
-            with sdpa_kernel(SDPBackend.FLASH_ATTENTION):
-                current = _forward_last(self.model, prompt, self._cache, positions, None)
+            current = _forward_last(self.model, prompt, self._cache, positions, None)
             self._cache.prefill_mode = False
             for layer in self.model.model.layers:
                 layer.mlp.decode_mode = True
