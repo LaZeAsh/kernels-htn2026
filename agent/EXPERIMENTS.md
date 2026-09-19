@@ -524,3 +524,19 @@ using the same full-context formula with a changed reduction partition and
 order. QKV projections and prefill remain unchanged. The
 `output_proj_fused` stage is separately registered as unmeasured on the QKV
 baseline. `combined_tc_residual` remains archived as a later isolation stage.
+
+## GQA scheduling queued; precise PV plus QKV promoted
+
+The increased grouped GQA split count was accepted at actual source commit
+`5fc732acf07aeb55b2b4df2096dfbb7e1059c930` as submission
+`009185bb-8ec4-4fb0-a007-38782af55a0b`, official run
+`4450c9d9-aff3-45c3-b2eb-73634e665af3`. It was queued when recorded;
+no correctness or score is attributed yet.
+
+The live engine is now `combined_precise_qkv`, combining the passing precise
+PV candidate (720.684275 tokens/s) with the passing QKV split candidate
+(745.470297 tokens/s). Relative to precise PV, only the decode attention
+adapter dispatch and passing QKV split kernel were added. The precise PV
+kernel and prefill/residual engine path are bytewise unchanged. Their
+interaction remains unmeasured, so neither passing result is attributed to
+this combined engine. The GQA scheduling variant is kept separate.

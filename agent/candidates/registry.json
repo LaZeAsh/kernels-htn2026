@@ -117,9 +117,19 @@
     },
     {
       "id": "v18_gqa_more_splits",
+      "path": "agent/candidates/gqa_more_splits",
+      "disposition": "queued",
+      "reason": "One-line grouped GQA split target change from 128 to 512 on passing QKV baseline; tests parallelism without other source changes.",
+      "commitSha": "5fc732acf07aeb55b2b4df2096dfbb7e1059c930",
+      "submissionId": "009185bb-8ec4-4fb0-a007-38782af55a0b",
+      "runId": "4450c9d9-aff3-45c3-b2eb-73634e665af3"
+    },
+    {
+      "id": "v20_combined_precise_qkv",
       "path": "engine",
       "disposition": "active",
-      "reason": "One-line grouped GQA split target change from 128 to 512 on passing QKV baseline; tests parallelism without other source changes."
+      "reason": "Combine passing precise PV 720.684 candidate with passing QKV split 745.470 decode projection only; interaction unmeasured.",
+      "numericalRisk": "combined changes unmeasured on hidden workloads"
     },
     {
       "id": "v10_combined_tc_residual",
