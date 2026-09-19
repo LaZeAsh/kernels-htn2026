@@ -1,19 +1,51 @@
-"""Native Qwen3 4B engine: the starter, and a complete submission as it is.
-
-Loads the pinned checkpoint with Transformers and decodes greedily with a KV
-cache. Submit unchanged to measure starting throughput, then improve it:
-cache layout, CUDA graphs, fused kernels, chunked prefill, speculative decoding
-with exact verification. What you may not change is the answer: every token
-must be the one native Qwen picks, judged by a teacher-forced replay.
-"""
+"""Qwen3 greedy engine with fused norms and direct decoder-layer dispatch."""
 
 import torch
-from transformers import AutoModelForCausalLM
+from transformers import AutoModelForCausalLM, DynamicCache
+
+from kernels.rmsnorm import rms_norm
+
+
+class FusedRMSNorm(torch.nn.Module):
+    """Keep the reference gain and BF16 rounding boundary."""
+
+    def __init__(self, reference):
+        super().__init__()
+        self.weight = reference.weight
+        self.variance_epsilon = reference.variance_epsilon
+
+    def forward(self, hidden_states):
+        return rms_norm(hidden_states, self.weight, self.variance_epsilon)
+
+
+@torch.inference_mode()
+def _forward_last_logits(model, input_ids, cache, first_position):
+    base = model.model
+    hidden_states = base.embed_tokens(input_ids)
+    length = input_ids.shape[1]
+    cache_position = torch.arange(
+        first_position, first_position + length, device=input_ids.device
+    )
+    position_ids = cache_position.unsqueeze(0)
+    position_embeddings = base.rotary_emb(hidden_states, position_ids)
+
+    for layer in base.layers:
+        hidden_states = layer(
+            hidden_states,
+            attention_mask=None,
+            position_ids=position_ids,
+            past_key_value=cache,
+            use_cache=True,
+            cache_position=cache_position,
+            position_embeddings=position_embeddings,
+        )[0]
+
+    hidden_states = base.norm(hidden_states)
+    return model.lm_head(hidden_states[:, -1:, :])
 
 
 class Engine:
     def __init__(self, model_path: str) -> None:
-        """Load the pinned checkpoint from model_path. Untimed, budgeted."""
         torch.backends.cuda.matmul.allow_tf32 = False
         torch.backends.cudnn.allow_tf32 = False
         self.model = (
@@ -27,24 +59,23 @@ class Engine:
             .to("cuda:0")
         )
 
-    def generate(self, input_ids: list[list[int]], max_new_tokens: int):
-        """Greedy continuation of every sequence, one step at a time.
+        base = self.model.model
+        base.norm = FusedRMSNorm(base.norm)
+        for layer in base.layers:
+            layer.input_layernorm = FusedRMSNorm(layer.input_layernorm)
+            layer.post_attention_layernorm = FusedRMSNorm(
+                layer.post_attention_layernorm
+            )
+            layer.self_attn.q_norm = FusedRMSNorm(layer.self_attn.q_norm)
+            layer.self_attn.k_norm = FusedRMSNorm(layer.self_attn.k_norm)
 
-        Yields a list with one token id per sequence for each output step,
-        exactly max_new_tokens times. Every sequence has the same length.
-        Never stops at end-of-sequence tokens.
-        """
+    def generate(self, input_ids: list[list[int]], max_new_tokens: int):
         current = torch.tensor(input_ids, dtype=torch.int64, device="cuda:0")
-        cache = None
+        cache = DynamicCache()
+        position = 0
         with torch.inference_mode():
             for _ in range(max_new_tokens):
-                output = self.model(
-                    input_ids=current,
-                    past_key_values=cache,
-                    use_cache=True,
-                    logits_to_keep=1,
-                    return_dict=True,
-                )
-                current = output.logits[:, -1, :].argmax(dim=-1, keepdim=True)
-                cache = output.past_key_values
+                logits = _forward_last_logits(self.model, current, cache, position)
+                position += current.shape[1]
+                current = logits[:, -1, :].argmax(dim=-1, keepdim=True)
                 yield current[:, 0].tolist()
