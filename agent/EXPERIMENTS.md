@@ -254,3 +254,27 @@ to load each KV tile once for four query heads. The residual stage remains at
 run metadata. Live package validation passes (six source files, 6,999 bytes),
 as do Python syntax and diff checks. GPU compilation and correctness are still
 unknown until this candidate's own run.
+
+The grouped Tensor Core candidate was committed as
+`477526dfb1340d7e8f185d2171310ed9c73e39e8`, creating submission
+`66b198b9-84c4-40fa-8f66-c347da512fcd` and official run
+`fb2a006e-e72b-4ea4-8e39-534c9b45b850` (queued at 20:18:47 UTC).
+The residual fusion run was still measuring. No grouped candidate result is
+claimed here.
+
+## Residual passed; prefill fusion on residual baseline promoted
+
+Residual-plus-RMSNorm fusion passed official run
+`f7f18cf8-8fad-476d-9cda-385f2affb373` at commit
+`b0e72d6c6773a6e4875c794c970ee1c817aa52ba`, scoring 517.746928
+tokens/s and rank 38. This is the best ranked result so far.
+
+`agent/candidates/prefill_residual_fused/` combines the passing residual
+engine and residual norm kernel with the staged prefill Q/K norm, RoPE and KV
+write fusion plus prefill SwiGLU. The decode engine loop, residual kernel, GQA
+kernel and RMSNorm kernel are byte-for-byte identical to the passing residual
+candidate; its attention decode branch keeps the same operations. Thus the
+new experiment targets prefill only. It was copied to `engine/` while the
+separate grouped Tensor Core run remained measuring. Syntax, diff and package
+checks pass (seven source files, 8,116 bytes). Prefill numerical agreement and
+performance still require an official run.

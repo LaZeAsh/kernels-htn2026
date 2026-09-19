@@ -54,15 +54,19 @@
     {
       "id": "v6_residual_fused",
       "path": "agent/candidates/residual_fused",
-      "disposition": "measuring",
+      "disposition": "passed",
       "commitSha": "b0e72d6c6773a6e4875c794c970ee1c817aa52ba",
       "submissionId": "a6e768d8-bab6-4fad-a2ab-9c5b0fda4dc0",
-      "runId": "f7f18cf8-8fad-476d-9cda-385f2affb373"
+      "runId": "f7f18cf8-8fad-476d-9cda-385f2affb373",
+      "scoreTokensPerSecond": 517.7469282419618
     },
     {
       "id": "v7_grouped_tc_fused",
-      "path": "engine",
-      "disposition": "active"
+      "path": "agent/candidates/grouped_tc_fused",
+      "disposition": "measuring",
+      "commitSha": "477526dfb1340d7e8f185d2171310ed9c73e39e8",
+      "submissionId": "66b198b9-84c4-40fa-8f66-c347da512fcd",
+      "runId": "fb2a006e-e72b-4ea4-8e39-534c9b45b850"
     },
     {
       "id": "v6_grouped_tc",
@@ -73,6 +77,11 @@
       "id": "v7_fused_mlp",
       "path": "agent/candidates/fused_mlp",
       "disposition": "unmeasured"
+    },
+    {
+      "id": "v8_prefill_residual_fused",
+      "path": "engine",
+      "disposition": "active"
     }
   ]
 }
