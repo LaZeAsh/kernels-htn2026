@@ -119,14 +119,17 @@
     },
     {
       "id": "v12_qkv_split_fused",
-      "path": "engine",
-      "disposition": "active",
-      "numericalRisk": "high: custom QKV projection GEMM; indexing reviewed, GPU result absent"
+      "path": "agent/candidates/qkv_split_fused",
+      "disposition": "queued",
+      "numericalRisk": "high: custom QKV projection GEMM; indexing reviewed, GPU result absent",
+      "commitSha": "575d1f9174b25de287fadb2ff839fd71abee6073",
+      "runId": "27d7715d-f2ac-48a3-9275-db1c25e0845e",
+      "submissionId": "9f529391-880f-4259-9bb1-72391c70b685"
     },
     {
       "id": "v13_mlp_split_fused",
-      "path": "agent/candidates/mlp_split_fused",
-      "disposition": "unmeasured",
+      "path": "engine",
+      "disposition": "active",
       "numericalRisk": "higher: custom decode gate/up GEMM tiling and BF16 reduction order; based on passed v7 grouped TC, native prefill"
     }
   ]

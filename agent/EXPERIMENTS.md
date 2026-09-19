@@ -414,3 +414,18 @@ projection path, keeping native prefill and the passing grouped attention
 kernel; no result is attributed to it yet. The separate `mlp_split_fused`
 variant is registered as a later unmeasured experiment on the same passing
 base. It is not merged with QKV split.
+
+## QKV split queued; MLP split promoted separately
+
+QKV split was accepted as submission `9f529391-880f-4259-9bb1-72391c70b685`,
+official run `27d7715d-f2ac-48a3-9275-db1c25e0845e`, actual source commit
+`575d1f9174b25de287fadb2ff839fd71abee6073`. It was queued when
+recorded; no correctness or score is attributed to it yet. The combined
+prefill/residual plus grouped attention run remains measuring. Both snapshots
+are retained under `agent/candidates/`.
+
+The live engine is now the independent `mlp_split_fused` candidate on the
+passing 709.857148 tokens/s grouped attention baseline. It changes the
+decode gate/up projection schedule while preserving native prefill and native
+Q/K/V projections. It does not include the queued QKV or combined changes.
+The custom reduction remains unmeasured and numerically higher risk.
