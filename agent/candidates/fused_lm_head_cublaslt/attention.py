@@ -1,7 +1,6 @@
 """Native Qwen3 projections and prefill; direct full-context GQA on decode."""
 
 import types
-import torch.nn.functional as F
 
 from kernels.decode_fusion import qk_norm_rope_cache, swiglu
 from kernels.qkv_split import project_norm_rope_cache
@@ -77,18 +76,11 @@ def install_direct_gqa(layer):
     attention.forward = types.MethodType(_attention_forward, attention)
     mlp = layer.mlp
     mlp.decode_mode = False
-    # Keep native [N,K] parameters for prefill; decode uses physical [K,N].
-    mlp.gate_weight_transposed = mlp.gate_proj.weight.t().contiguous()
-    mlp.up_weight_transposed = mlp.up_proj.weight.t().contiguous()
     mlp.forward = types.MethodType(_mlp_forward, mlp)
 
 
 def _mlp_forward(self, x):
-    if self.decode_mode and x.shape[0] <= 16:
-        gate = F.linear(x, self.gate_weight_transposed.t())
-        up = F.linear(x, self.up_weight_transposed.t())
-        product = swiglu(gate, up)
-    elif self.decode_mode:
+    if self.decode_mode:
         gate = self.gate_proj(x)
         up = self.up_proj(x)
         product = swiglu(gate, up)

@@ -141,31 +141,42 @@
     {
       "id": "v27_native_gqa_prefill_precise_qkv",
       "path": "agent/candidates/native_gqa_prefill_precise_qkv",
-      "disposition": "queued",
+      "disposition": "passed",
       "priority": 5,
       "reason": "Targeted repair of hidden-failed native GQA prefill: only grouped decode PV kernel changed to passing two-term BF16 probability dot from combined_precise_qkv; prefill source unchanged.",
-      "numericalRisk": "Combined hidden behavior unmeasured despite passing transplanted PV kernel.",
+      "numericalRisk": "Official hidden correctness passed; numerical cause of earlier native prefill failure remains unproven.",
       "commitSha": "0ddc22194bf691233885fc8c317c02cdb0db10be",
       "submissionId": "2704f25c-4d9a-431f-963a-e2a4c9097cfa",
-      "runId": "43987bca-d75b-4ea6-97e3-1e7a84cff71f"
+      "runId": "43987bca-d75b-4ea6-97e3-1e7a84cff71f",
+      "ranked": true,
+      "scoreTokensPerSecond": 774.4492507424184
     },
     {
       "id": "v29_combined_precise_qkv_cublaslt",
       "path": "agent/candidates/combined_precise_qkv_cublaslt",
-      "disposition": "queued",
+      "disposition": "passed",
       "priority": 5,
       "reason": "Only cuBLASLt decode capture preference from passing 775.994986 stage applied to passing 769.789834 precise PV plus QKV combination; interaction unmeasured.",
       "commitSha": "f94a42d448b9e702aa2b92f9902ad166e740fe12",
       "submissionId": "364b7917-6191-4291-9312-b8fde89218e1",
-      "runId": "d5421685-4526-4ef7-862d-7c32abaa8c13"
+      "runId": "d5421685-4526-4ef7-862d-7c32abaa8c13",
+      "ranked": true,
+      "scoreTokensPerSecond": 776.3432937923168
     },
     {
       "id": "v31_parallel_mlp_cublaslt",
-      "path": "engine",
-      "disposition": "active",
+      "path": "agent/candidates/parallel_mlp_cublaslt",
+      "disposition": "rejected",
       "priority": 10,
       "reason": "Parallel decode MLP streams from unmeasured old stage rebased onto passing cuBLASLt scheduling 775.994986; only MLP stream path differs from passing baseline.",
-      "numericalRisk": "CUDA graph multi-stream interaction and hidden correctness unmeasured"
+      "numericalRisk": "CUDA graph multi-stream interaction and hidden correctness unmeasured",
+      "commitSha": "61d4f7aa8fc64deff8049f618590aff0798a545a",
+      "submissionId": "d2b01ba9-f8be-486a-af7d-c4089cdfb0d8",
+      "runId": "550ccc14-8940-4090-96dd-e0b4b775d7e6",
+      "resultStatus": "passed",
+      "ranked": true,
+      "scoreTokensPerSecond": 757.7735320848345,
+      "rejectionReason": "Official correctness passed, but slowdown vs cuBLASLt baseline 775.994986; do not promote."
     },
     {
       "id": "v10_combined_tc_residual",
@@ -228,7 +239,7 @@
       "path": "agent/candidates/autotuned_mlp_linear",
       "disposition": "unmeasured",
       "reason": "Independent decode MLP linear scheduling experiment based on passed v7 grouped TC.",
-      "priority": 40
+      "priority": 50
     },
     {
       "id": "v19_output_proj_fused",
@@ -255,7 +266,7 @@
       "path": "agent/candidates/output_o_fused",
       "disposition": "unmeasured",
       "numericalRisk": "custom split-K attention output projection only; passing QKV base for other path",
-      "priority": 30
+      "priority": 40
     },
     {
       "id": "v23_output_down_fused",
@@ -284,9 +295,10 @@
     {
       "id": "v25_transposed_mlp_qkv",
       "path": "agent/candidates/transposed_mlp_qkv",
-      "disposition": "unmeasured",
+      "disposition": "withdrawn",
       "reason": "Decode MLP weight layout/scheduling variant on passing QKV baseline.",
-      "priority": 20
+      "priority": 20,
+      "withdrawalReason": "Superseded by transposed_mlp_cublaslt on passing 775.994986 baseline; old source retained."
     },
     {
       "id": "v26_parallel_mlp_qkv",
@@ -308,9 +320,25 @@
       "id": "v30_output_down_norm_precise_qkv",
       "path": "agent/candidates/output_down_norm_precise_qkv",
       "disposition": "unmeasured",
-      "priority": 50,
+      "priority": 60,
       "reason": "Custom down projection and norm on passing precise PV plus QKV baseline; wait for isolated down projection result.",
       "numericalRisk": "custom split-K down projection and norm interaction unmeasured"
+    },
+    {
+      "id": "v32_transposed_mlp_cublaslt",
+      "path": "engine",
+      "disposition": "active",
+      "priority": 20,
+      "reason": "Transposed BF16 gate/up weight copies for decode on passing cuBLASLt QKV baseline 775.994986; native weights retained for prefill.",
+      "numericalRisk": "extra weight memory and altered GEMM scheduling; hidden correctness/performance unmeasured"
+    },
+    {
+      "id": "v33_fused_lm_head_cublaslt",
+      "path": "agent/candidates/fused_lm_head_cublaslt",
+      "disposition": "unmeasured",
+      "priority": 30,
+      "reason": "Full-vocabulary fused LM head with two-level argmax on passing cuBLASLt QKV baseline; preserves BF16 logit boundary and min-index tie.",
+      "numericalRisk": "custom FP32 dot reduction, autotune warmup, and hidden correctness unmeasured"
     }
   ]
 }

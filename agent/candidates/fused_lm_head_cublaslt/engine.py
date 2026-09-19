@@ -7,6 +7,7 @@ import torch
 from transformers import AutoModelForCausalLM
 
 from kernels.rmsnorm import rms_norm
+from kernels.lm_head import fused_lm_argmax
 from attention import install_direct_gqa
 
 
@@ -71,7 +72,10 @@ def _forward_last(model, token_ids, cache, positions, attention_mask):
             cache_position=positions,
             position_embeddings=position_embeddings,
         )[0]
-    return model.lm_head(base.norm(hidden[:, -1:, :])).argmax(-1)
+    normalized = base.norm(hidden[:, -1:, :])
+    if not cache.prefill_mode and token_ids.shape[0] <= 16:
+        return fused_lm_argmax(normalized, model.lm_head.weight)
+    return model.lm_head(normalized).argmax(-1)
 
 
 class Engine:

@@ -759,3 +759,55 @@ MLP stage, only the passing cuBLASLt preference around graph warmup and
 capture was added. Native prefill and the B>16 fallback remain. The old
 parallel stage is archived but withdrawn as superseded. CUDA graph stream
 interaction has no official correctness or speed result yet.
+
+## Parallel Lt queued; transposed MLP and LM head staged
+
+The parallel MLP plus cuBLASLt candidate was accepted at actual source
+commit `61d4f7aa8fc64deff8049f618590aff0798a545a`, submission
+`d2b01ba9-f8be-486a-af7d-c4089cdfb0d8`, official run
+`550ccc14-8940-4090-96dd-e0b4b775d7e6`. It was queued when recorded;
+no score or correctness is attributed yet. Live source is unchanged.
+
+`transposed_mlp_cublaslt` is staged at priority 20 on the passing cuBLASLt
+QKV baseline; the older transposed MLP stage on the QKV baseline is archived
+and withdrawn as superseded. `fused_lm_head_cublaslt` is staged at priority
+30, using full-vocabulary logits, a BF16 logit boundary and two-level argmax
+with the original minimum-index tie behavior. Its autotune and custom dot
+reduction are unmeasured. Later priorities are attention output projection
+only (40), compiled MLP linear (50), and down projection plus norm (60).
+Neither new stage is live.
+
+## Native prefill precision repair passed
+
+The native GQA prefill plus precise PV repair passed official run
+`43987bca-d75b-4ea6-97e3-1e7a84cff71f` at source commit
+`0ddc22194bf691233885fc8c317c02cdb0db10be`, scoring 774.449251
+tokens/s. This is below the cuBLASLt best at 775.994986 tokens/s. The
+successful hidden correctness result supports the probability-rounding
+hypothesis for the earlier failed native prefill variant, but does not prove
+its causal mechanism.
+
+A read-only comparison against the failed native prefill run has no ranked
+score delta because that run was unranked. Public TPOT was 4.647 vs 4.622 ms,
+5.354 vs 5.254 ms, and 5.486 vs 5.346 ms; the repair was 0.54%, 1.89% and
+2.63% slower in those public cases. The comparison does not establish a
+hidden speed delta. The lossless MLP stage remains unregistered pending the
+requested source review. Live engine and accepted run metadata are unchanged.
+
+## Combined Lt leads; parallel Lt slower; transposed MLP live
+
+The precise PV plus QKV with cuBLASLt candidate passed official run
+`d5421685-4526-4ef7-862d-7c32abaa8c13` at source commit
+`f94a42d448b9e702aa2b92f9902ad166e740fe12`, scoring 776.343294
+tokens/s, a marginal new best. The parallel MLP plus cuBLASLt candidate also
+passed correctness in run `550ccc14-8940-4090-96dd-e0b4b775d7e6` at commit
+`61d4f7aa8fc64deff8049f618590aff0798a545a`, scoring 757.773532
+tokens/s. It is rejected for promotion because it is slower than its
+775.994986 cuBLASLt baseline. Full run JSON files are saved under
+`agent/runs/`, with actual source commits matching the registry.
+
+The live engine is now `transposed_mlp_cublaslt`, based on the passing
+cuBLASLt QKV source. Only decode gate/up physical weight layout and Linear
+calls differ; native weights remain for prefill. It adds approximately
+3.34 GiB of BF16 gate/up copies across the model. Official correctness,
+memory and speed for this stage remain unmeasured.
