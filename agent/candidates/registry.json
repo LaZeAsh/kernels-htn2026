@@ -53,6 +53,14 @@
     },
     {
       "id": "v6_residual_fused",
+      "path": "agent/candidates/residual_fused",
+      "disposition": "measuring",
+      "commitSha": "b0e72d6c6773a6e4875c794c970ee1c817aa52ba",
+      "submissionId": "a6e768d8-bab6-4fad-a2ab-9c5b0fda4dc0",
+      "runId": "f7f18cf8-8fad-476d-9cda-385f2affb373"
+    },
+    {
+      "id": "v7_grouped_tc_fused",
       "path": "engine",
       "disposition": "active"
     },

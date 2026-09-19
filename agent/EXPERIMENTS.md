@@ -224,3 +224,33 @@ The residual-plus-RMSNorm fusion candidate was promoted from
 syntax, diff and package checks pass (seven source files, 7,590-byte archive).
 The staged fused MLP candidate remains unmeasured and has higher numerical
 risk because it changes projection GEMM reduction order.
+
+## Residual run; grouped KV sharing on passing V5 staged
+
+Residual fusion was pushed as commit
+`b0e72d6c6773a6e4875c794c970ee1c817aa52ba`, producing submission
+`a6e768d8-bab6-4fad-a2ab-9c5b0fda4dc0` and official run
+`f7f18cf8-8fad-476d-9cda-385f2affb373`. It was validating when recorded.
+
+`agent/candidates/grouped_tc_fused/` starts from passing V5, retaining its
+native separate projections, fused Q/K norm/RoPE/KV writes, and fused SwiGLU.
+Only its scalar-head GQA decode kernel is replaced with grouped Tensor Core
+GQA. A program loads each K/V tile once for four query heads. Prefill remains
+native SDPA. Split ranges and masks are unchanged from the standalone grouped
+candidate and cover all initialized keys with a device-side current position.
+The pinned Triton 3.1 source defines the used `tl.dot(..., out_dtype=...)`,
+reshape/split/join and scalar-control APIs; GPU compilation is still required.
+Syntax, diff, partition and package checks pass (six source files, 6,999
+bytes). The BF16 probability cast and changed reduction order require
+teacher-forced token validation. The live residual engine remains untouched.
+
+## Grouped Tensor Core candidate promoted
+
+`agent/candidates/grouped_tc_fused/` was copied to `engine/` for an independent
+official run while the residual fusion submission remains immutable and
+measuring. Its comparison baseline is passing V5; it changes only decode GQA
+to load each KV tile once for four query heads. The residual stage remains at
+`agent/candidates/residual_fused/` with its original commit, submission and
+run metadata. Live package validation passes (six source files, 6,999 bytes),
+as do Python syntax and diff checks. GPU compilation and correctness are still
+unknown until this candidate's own run.
