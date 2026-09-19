@@ -308,3 +308,21 @@ performance result. The registry records the prefill commit as
 `awaiting_ingest` with no submission or run ID. A later legitimate metadata
 push may retrigger the repository hook; match any resulting submission's
 source commit before attributing it to this engine.
+
+The metadata retry was ingested as source commit
+`9d73378b889ac565fa9adcb30a9305c892f396a1`, creating submission
+`2c713878-4fb0-4a23-a710-01bdb93fd7b0` and official run
+`3d453ddc-1f50-478a-ad72-efdf5725f9ed` (queued at 20:28:10 UTC). The
+original prefill engine push was `a9f4756d6cc4d476df7c620fd16e41884aa6a6b6`;
+the run belongs to the retry commit. No result was available when recorded.
+
+## Fused MLP on residual baseline promoted
+
+`agent/candidates/fused_mlp_residual/` was copied to `engine/` for an
+independent official run. The live engine's decoder loop, residual norm,
+Q/K fusion and scalar GQA files are bytewise identical to the passing
+residual source. Prefill remains native, so this tests only the custom
+decode gate/up GEMM and SwiGLU path for batches up to 16. The grouped Tensor
+Core and prefill submissions are separate immutable runs. Syntax, diff and
+package checks pass (eight source files, 8,309 bytes). The custom GEMM
+reduction order remains a high numerical risk until its own GPU result.

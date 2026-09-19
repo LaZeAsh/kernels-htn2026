@@ -80,16 +80,17 @@
     },
     {
       "id": "v8_prefill_residual_fused",
-      "path": "engine",
-      "disposition": "awaiting_ingest",
-      "commitSha": "a9f4756d6cc4d476df7c620fd16e41884aa6a6b6",
-      "submissionId": null,
-      "runId": null
+      "path": "agent/candidates/prefill_residual_fused",
+      "disposition": "measuring",
+      "commitSha": "9d73378b889ac565fa9adcb30a9305c892f396a1",
+      "submissionId": "2c713878-4fb0-4a23-a710-01bdb93fd7b0",
+      "runId": "3d453ddc-1f50-478a-ad72-efdf5725f9ed",
+      "originalEnginePushCommitSha": "a9f4756d6cc4d476df7c620fd16e41884aa6a6b6"
     },
     {
       "id": "v9_fused_mlp_residual",
-      "path": "agent/candidates/fused_mlp_residual",
-      "disposition": "unmeasured",
+      "path": "engine",
+      "disposition": "active",
       "numericalRisk": "higher: custom gate/up GEMM reduction order"
     }
   ]
