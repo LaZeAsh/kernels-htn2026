@@ -1,5 +1,6 @@
 """Record and assess runs from a repository-connected Dryft submission."""
 
+import argparse
 import hashlib
 import json
 import math
@@ -99,7 +100,7 @@ def _engine_revision(engine_dir: Path) -> dict:
 
 
 def save_run(detail: dict, submission_id: str, mode: str,
-             local_checkout_at_start: dict,
+             local_checkout_snapshot: dict,
              history_dir: Path = HISTORY_DIR) -> Path:
     """Persist full API detail and append a compact experiment index."""
     history_dir.mkdir(parents=True, exist_ok=True)
@@ -114,7 +115,7 @@ def save_run(detail: dict, submission_id: str, mode: str,
         "state": detail.get("state"),
         "scoreTokensPerSecond": (detail.get("result") or {}).get("score"),
         "detailFile": full_path.name,
-        "localCheckoutAtRunStart": local_checkout_at_start,
+        "localCheckoutSnapshot": local_checkout_snapshot,
         "submissionSourceVerified": False,
     }
     with (history_dir / "history.jsonl").open("a") as stream:
@@ -140,3 +141,24 @@ def attempt(client: Dryft, submission_id: str, mode: str, timeout: float,
 
 def plan_next_edit(history: list[dict]) -> str:
     raise NotImplementedError("this is the part you write")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Wait for and save an existing Dryft run without starting another"
+    )
+    parser.add_argument("run_id", help="existing run ID")
+    parser.add_argument("--submission-id", required=True)
+    parser.add_argument("--mode", choices=("official", "public"), default="official")
+    parser.add_argument("--timeout", type=float, default=3000)
+    args = parser.parse_args()
+    snapshot = _engine_revision(ENGINE_DIR)
+    detail = Dryft().wait(args.run_id, timeout=args.timeout)
+    path = save_run(detail, args.submission_id, args.mode, snapshot)
+    print(f"saved {path}")
+    if not report(detail):
+        raise SystemExit(1)
+
+
+if __name__ == "__main__":
+    main()
