@@ -1,10 +1,10 @@
 """Native projections with fused prefill and direct full-context GQA decode."""
 
 import types
-import torch.nn.functional as F
 
 from kernels.decode_fusion import qk_norm_rope_cache, prefill_qk_norm_rope_cache, swiglu
 from kernels.qkv_split import project_norm_rope_cache
+from kernels.lossless_mlp import encode_validate, lossless_swiglu
 from transformers.models.qwen3.modeling_qwen3 import (
     ALL_ATTENTION_FUNCTIONS,
     apply_rotary_pos_emb,
@@ -63,12 +63,13 @@ def _attention_forward(
             past_key_value.prefill_length = length
         key_states = past_key_value.keys[self.layer_idx][:, :, :length, :]
         value_states = past_key_value.values[self.layer_idx][:, :, :length, :]
-        attn_output = F.scaled_dot_product_attention(
-            query_states, key_states, value_states,
-            attn_mask=None, dropout_p=0.0, is_causal=length > 1,
-            scale=self.scaling, enable_gqa=True,
-        ).transpose(1, 2).contiguous()
-        attn_weights = None
+        attention_interface = ALL_ATTENTION_FUNCTIONS[self.config._attn_implementation]
+        attn_output, attn_weights = attention_interface(
+            self, query_states, key_states, value_states, attention_mask,
+            dropout=0.0 if not self.training else self.attention_dropout,
+            scaling=self.scaling, sliding_window=self.sliding_window,
+            **kwargs,
+        )
     else:
         query_states = self.q_norm(self.q_proj(hidden_states).view(hidden_shape)).transpose(1, 2)
         key_states = self.k_norm(self.k_proj(hidden_states).view(hidden_shape)).transpose(1, 2)
@@ -98,11 +99,19 @@ def install_direct_gqa(layer):
     attention.forward = types.MethodType(_attention_forward, attention)
     mlp = layer.mlp
     mlp.decode_mode = False
+    mlp.gate_codec = encode_validate(mlp.gate_proj.weight)
+    mlp.up_codec = encode_validate(mlp.up_proj.weight)
     mlp.forward = types.MethodType(_mlp_forward, mlp)
 
 
 def _mlp_forward(self, x):
-    gate = self.gate_proj(x)
-    up = self.up_proj(x)
-    product = swiglu(gate, up)
+    if self.decode_mode and x.shape[0] <= 16:
+        product = lossless_swiglu(
+            x, self.gate_proj.weight, self.up_proj.weight,
+            self.gate_codec, self.up_codec,
+        )
+    else:
+        gate = self.gate_proj(x)
+        up = self.up_proj(x)
+        product = swiglu(gate, up)
     return self.down_proj(product)

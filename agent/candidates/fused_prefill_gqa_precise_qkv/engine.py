@@ -150,21 +150,16 @@ class Engine:
         return _decode_last(self.model, self._input, self._cache, self._position)
 
     def _capture(self, token, position):
-        previous_blas = torch.backends.cuda.preferred_blas_library()
-        try:
-            torch.backends.cuda.preferred_blas_library("cublaslt")
-            stream = torch.cuda.Stream()
-            stream.wait_stream(torch.cuda.current_stream())
-            with torch.cuda.stream(stream):
-                self._input.copy_(token)
-                self._position.fill_(position)
-                self._decode()  # warm kernels and allocator on the capture stream
-                graph = torch.cuda.CUDAGraph()
-                with torch.cuda.graph(graph):
-                    output = self._decode()
-            torch.cuda.current_stream().wait_stream(stream)
-        finally:
-            torch.backends.cuda.preferred_blas_library(previous_blas)
+        stream = torch.cuda.Stream()
+        stream.wait_stream(torch.cuda.current_stream())
+        with torch.cuda.stream(stream):
+            self._input.copy_(token)
+            self._position.fill_(position)
+            self._decode()  # warm kernels and allocator on the capture stream
+            graph = torch.cuda.CUDAGraph()
+            with torch.cuda.graph(graph):
+                output = self._decode()
+        torch.cuda.current_stream().wait_stream(stream)
         self._graph = graph
         self._graph_output = output
 

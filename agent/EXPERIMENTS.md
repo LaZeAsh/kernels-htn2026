@@ -811,3 +811,24 @@ cuBLASLt QKV source. Only decode gate/up physical weight layout and Linear
 calls differ; native weights remain for prefill. It adds approximately
 3.34 GiB of BF16 gate/up copies across the model. Official correctness,
 memory and speed for this stage remain unmeasured.
+
+## Flash GQA prefill on current best promoted
+
+The transposed MLP plus cuBLASLt candidate was accepted at actual source
+commit `6ebb9c4eed588daf0906b4b1ba7b6977631bcf4c`, submission
+`1d06a140-919c-4d88-8318-27dca99e6c94`, official run
+`0ed08d2b-ad1b-4993-a015-bcc4030c4d19`. It was validating when
+recorded; no result is attributed yet.
+
+The live engine is now `fused_prefill_gqa_precise_qkv_cublaslt`, based on the
+passing 776.343294 tokens/s precise PV plus QKV with cuBLASLt candidate.
+Only the prefill attention call uses direct grouped GQA Flash SDPA instead
+of the Transformers interface, with a Flash-only context around prefill.
+Its decode source and fused prefill projections remain unchanged. Earlier
+native GQA prefill plus precise PV passed independently, but this composition
+still needs official correctness and speed measurement.
+
+`lossless_mlp_precise_qkv` is registered unmeasured at priority 80. Luna's
+static source review found no bit or stride blocker; a GPU bit self-test,
+all-weight validation, and official correctness remain unrun. It is staged
+separately and not part of the live engine.
