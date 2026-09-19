@@ -326,3 +326,75 @@ decode gate/up GEMM and SwiGLU path for batches up to 16. The grouped Tensor
 Core and prefill submissions are separate immutable runs. Syntax, diff and
 package checks pass (eight source files, 8,309 bytes). The custom GEMM
 reduction order remains a high numerical risk until its own GPU result.
+
+## Grouped GQA passed; grouped GQA plus residual staged
+
+Grouped Tensor Core GQA on the V5 baseline passed official run
+`fb2a006e-e72b-4ea4-8e39-534c9b45b850` at commit
+`477526dfb1340d7e8f185d2171310ed9c73e39e8`, scoring 709.857148
+tokens/s at rank 33. It is the best ranked result so far. The prefill run
+`3d453ddc-1f50-478a-ad72-efdf5725f9ed` was measuring, and the separate
+fused MLP run `18b4c0e9-56ec-48fc-9a66-cc25c98475a8` was queued from
+commit `83b962a410e16123fa66df618aaa60b0154055e3` and submission
+`4807f5eb-5aee-4529-8b1c-872fb75369ba`.
+
+`agent/candidates/combined_tc_residual/` combines two passing changes:
+residual fusion from V6 and grouped GQA from V7. The engine loop and residual
+kernel are bytewise the passing V6 files; attention and grouped GQA kernel
+are bytewise the passing V7 files. Other shared kernels match both sources.
+It contains no pending prefill or fused MLP changes. Syntax, diff and package
+checks pass (seven source files, 7,816 bytes). Their interaction still needs
+an independent GPU correctness and speed result. It remains staged while the
+pending runs complete; the live engine is untouched.
+
+## Prefill passed; grouped GQA plus prefill/residual staged
+
+Prefill fusion on the residual baseline passed official run
+`3d453ddc-1f50-478a-ad72-efdf5725f9ed` at actual source commit
+`9d73378b889ac565fa9adcb30a9305c892f396a1`, scoring 537.320345
+tokens/s. Public-shaped TTFT was 15.984, 131.567 and 118.139 ms versus the
+residual baseline's 20.613, 162.26 and 151.397 ms; TPOT was 6.301, 11.329
+and 7.863 ms. Grouped Tensor Core GQA remains the best ranked result at
+709.857148 tokens/s. The fused MLP run
+`18b4c0e9-56ec-48fc-9a66-cc25c98475a8` began measuring at 20:36:12 UTC.
+
+`agent/candidates/combined_tc_prefill_residual/` starts from passing prefill
+plus residual fusion. Its engine loop, fused prefill/SiLU kernel and residual
+norm kernel are bytewise identical to that source. The only attention adapter
+change replaces scalar GQA in decode with passing grouped Tensor Core GQA;
+the prefill branch is unchanged. The grouped kernel is bytewise the passing
+V7 kernel. Syntax, diff and package checks pass (seven source files, 8,342
+bytes); the combination still needs its own correctness and speed run.
+
+The separate `agent/candidates/qkv_split_fused/` stage from another coding
+agent is recorded as unmeasured with high numerical risk. Root reviewed its
+basic indexing; it has no GPU correctness result. Neither stage was promoted
+while the MLP run was pending.
+
+## Candidate registry audit while MLP measures
+
+The original V4-based grouped Tensor Core stage is withdrawn because the
+V5-based grouped Tensor Core candidate passed. The unsubmitted grouped-plus-
+residual stage is withdrawn because the passing prefill change has been added
+in `combined_tc_prefill_residual`. Earlier measured V1/V2 entries remain
+recorded as passed, with their run IDs and scores preserved in full run JSON.
+The decision helper now waits for the current fused MLP run; if that run
+succeeds and ranks, its next staged suggestion is
+`combined_tc_prefill_residual`. The QKV split stage remains a later,
+unmeasured, high-risk option. No engine source changed in this audit.
+
+## Fused MLP result and next combined candidate
+
+The fused MLP on the passing residual baseline succeeded and ranked in official
+run `18b4c0e9-56ec-48fc-9a66-cc25c98475a8` at commit
+`83b962a410e16123fa66df618aaa60b0154055e3`, scoring 514.843935
+tokens/s. Correctness passed, but the score is below the residual baseline's
+517.746928 tokens/s. Public TPOT was 6.399, 11.492 and 8.001 ms versus
+6.410, 11.381 and 7.913 ms. The candidate is rejected for promotion due to
+no convincing speed gain; its run and source remain recorded.
+
+`combined_tc_prefill_residual` is now the live engine for the next official
+run. It combines the independently passing grouped Tensor Core GQA and
+prefill/residual changes; their interaction has not yet been measured. The
+custom MLP kernel is absent from the live package. QKV split remains an
+unmeasured, higher-risk stage.

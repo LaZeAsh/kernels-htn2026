@@ -6,7 +6,7 @@
       "commitSha": "1dfba6ca9d5dbcf108ce4497a65dc8ab2e6724ba",
       "submissionId": "f747a3b6-de62-42d1-a176-503f8bfff340",
       "runId": "defeefdc-f71b-4718-80f5-e8a94ae43ebb",
-      "disposition": "active"
+      "disposition": "passed"
     },
     {
       "id": "v2_graph",
@@ -14,7 +14,7 @@
       "commitSha": "d664f2a35dea36a86a13a529b81b393e3941a7a2",
       "submissionId": "57acbad3-afe6-4091-bdfc-d8e4e4ba9516",
       "runId": "1e88deb4-e94c-4e51-b029-ec8aa04561ee",
-      "disposition": "active"
+      "disposition": "passed"
     },
     {
       "id": "v3_packed",
@@ -63,15 +63,17 @@
     {
       "id": "v7_grouped_tc_fused",
       "path": "agent/candidates/grouped_tc_fused",
-      "disposition": "measuring",
+      "disposition": "passed",
       "commitSha": "477526dfb1340d7e8f185d2171310ed9c73e39e8",
       "submissionId": "66b198b9-84c4-40fa-8f66-c347da512fcd",
-      "runId": "fb2a006e-e72b-4ea4-8e39-534c9b45b850"
+      "runId": "fb2a006e-e72b-4ea4-8e39-534c9b45b850",
+      "scoreTokensPerSecond": 709.8571482864263
     },
     {
       "id": "v6_grouped_tc",
       "path": "agent/candidates/grouped_tc",
-      "disposition": "unmeasured"
+      "disposition": "withdrawn",
+      "withdrawalReason": "superseded by passing v7_grouped_tc_fused"
     },
     {
       "id": "v7_fused_mlp",
@@ -81,17 +83,42 @@
     {
       "id": "v8_prefill_residual_fused",
       "path": "agent/candidates/prefill_residual_fused",
-      "disposition": "measuring",
+      "disposition": "passed",
       "commitSha": "9d73378b889ac565fa9adcb30a9305c892f396a1",
       "submissionId": "2c713878-4fb0-4a23-a710-01bdb93fd7b0",
       "runId": "3d453ddc-1f50-478a-ad72-efdf5725f9ed",
-      "originalEnginePushCommitSha": "a9f4756d6cc4d476df7c620fd16e41884aa6a6b6"
+      "originalEnginePushCommitSha": "a9f4756d6cc4d476df7c620fd16e41884aa6a6b6",
+      "scoreTokensPerSecond": 537.3203451261404
     },
     {
       "id": "v9_fused_mlp_residual",
+      "path": "agent/candidates/fused_mlp_residual",
+      "disposition": "rejected",
+      "numericalRisk": "higher: custom gate/up GEMM reduction order",
+      "commitSha": "83b962a410e16123fa66df618aaa60b0154055e3",
+      "submissionId": "4807f5eb-5aee-4529-8b1c-872fb75369ba",
+      "runId": "18b4c0e9-56ec-48fc-9a66-cc25c98475a8",
+      "resultStatus": "passed",
+      "ranked": true,
+      "scoreTokensPerSecond": 514.843934848969,
+      "rejectionReason": "No speed gain over passing residual baseline (517.746928 tokens/s); public TPOT also slightly worse."
+    },
+    {
+      "id": "v10_combined_tc_residual",
+      "path": "agent/candidates/combined_tc_residual",
+      "disposition": "withdrawn",
+      "withdrawalReason": "superseded by v11_combined_tc_prefill_residual after prefill passed"
+    },
+    {
+      "id": "v11_combined_tc_prefill_residual",
       "path": "engine",
-      "disposition": "active",
-      "numericalRisk": "higher: custom gate/up GEMM reduction order"
+      "disposition": "active"
+    },
+    {
+      "id": "v12_qkv_split_fused",
+      "path": "agent/candidates/qkv_split_fused",
+      "disposition": "unmeasured",
+      "numericalRisk": "high: custom QKV projection GEMM; indexing reviewed, GPU result absent"
     }
   ]
 }

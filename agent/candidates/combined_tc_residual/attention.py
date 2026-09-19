@@ -1,8 +1,8 @@
-"""Native projections with fused prefill and direct full-context GQA decode."""
+"""Native Qwen3 projections and prefill; direct full-context GQA on decode."""
 
 import types
 
-from kernels.decode_fusion import qk_norm_rope_cache, prefill_qk_norm_rope_cache, swiglu
+from kernels.decode_fusion import qk_norm_rope_cache, swiglu
 from transformers.models.qwen3.modeling_qwen3 import (
     ALL_ATTENTION_FUNCTIONS,
     apply_rotary_pos_emb,
@@ -36,28 +36,6 @@ def _attention_forward(
             past_key_value.prefill_length,
         )
         attn_weights = None
-    elif past_key_value is not None and past_key_value.prefill_mode:
-        q = self.q_proj(hidden_states)
-        k = self.k_proj(hidden_states)
-        v = self.v_proj(hidden_states)
-        query_states = prefill_qk_norm_rope_cache(
-            q, k, v, self.q_norm.weight, self.k_norm.weight,
-            cos, sin, past_key_value.keys[self.layer_idx],
-            past_key_value.values[self.layer_idx],
-            self.q_norm.variance_epsilon, self.k_norm.variance_epsilon,
-        )
-        length = input_shape[-1]
-        if self.layer_idx == 0:
-            past_key_value.prefill_length = length
-        key_states = past_key_value.keys[self.layer_idx][:, :, :length, :]
-        value_states = past_key_value.values[self.layer_idx][:, :, :length, :]
-        attention_interface = ALL_ATTENTION_FUNCTIONS[self.config._attn_implementation]
-        attn_output, attn_weights = attention_interface(
-            self, query_states, key_states, value_states, attention_mask,
-            dropout=0.0 if not self.training else self.attention_dropout,
-            scaling=self.scaling, sliding_window=self.sliding_window,
-            **kwargs,
-        )
     else:
         query_states = self.q_norm(self.q_proj(hidden_states).view(hidden_shape)).transpose(1, 2)
         key_states = self.k_norm(self.k_proj(hidden_states).view(hidden_shape)).transpose(1, 2)
@@ -91,7 +69,10 @@ def install_direct_gqa(layer):
 
 
 def _mlp_forward(self, x):
-    gate = self.gate_proj(x)
-    up = self.up_proj(x)
-    product = swiglu(gate, up)
+    if self.decode_mode:
+        gate = self.gate_proj(x)
+        up = self.up_proj(x)
+        product = swiglu(gate, up)
+    else:
+        product = self.act_fn(self.gate_proj(x)) * self.up_proj(x)
     return self.down_proj(product)
