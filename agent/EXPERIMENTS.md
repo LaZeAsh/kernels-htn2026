@@ -672,3 +672,56 @@ and other source remain unchanged. This tests whether the passing PV change
 restores hidden correctness in the native prefill variant; no result is yet
 attributed. The queued output down projection candidate remains archived
 with its existing run IDs. `transposed_mlp_qkv` remains staged separately.
+
+## Precision repair queued; next staged priority
+
+The native GQA prefill plus precise PV candidate was accepted from actual
+source commit `0ddc22194bf691233885fc8c317c02cdb0db10be`, submission
+`2704f25c-4d9a-431f-963a-e2a4c9097cfa`, official run
+`43987bca-d75b-4ea6-97e3-1e7a84cff71f`. It was queued when recorded;
+no result is attributed. Live engine source remains unchanged.
+
+After accepted runs are handled, staged priority is parallel MLP on the
+passing QKV baseline, transposed MLP, attention output projection only,
+then compiled MLP linear. The already accepted cuBLASLt and output down
+candidates keep their run metadata and do not compete for staging priority.
+
+## Autotuned fused MLP staged
+
+`autotuned_fused_mlp_precise_qkv` is registered as an unmeasured stage on the
+passing precise PV plus QKV baseline at 769.789834 tokens/s. The reviewed
+source changes decode SwiGLU for batches up to 16, retaining the original
+BF16 projection and activation boundaries. Four fixed Triton tile choices
+vary BN (64 or 128) and BK (64 or 128) with split four and two stages.
+One batch-specific choice is shared across layers after a warmup benchmark.
+GPU correctness, performance, and the load plus warmup budget are unmeasured.
+Its staged priority is 25, after parallel and transposed MLP and before
+attention output projection and compiled MLP. Live engine and pending runs
+remain unchanged.
+
+## cuBLASLt scheduling passed
+
+The cuBLASLt graph capture scheduling candidate passed official run
+`3c47d87f-2030-4c0e-962c-4c03c01abcd2` at source commit
+`3eab3f69e265bd351f691aa3997a8630183ffd08`, scoring 775.994986
+tokens/s, the new best. This is about 4.10% above its passing QKV baseline
+at 745.470297 tokens/s. The full report is saved under `agent/runs/`.
+The staged source remains archived; live engine source was not changed by
+recording this result.
+
+## Precise PV plus QKV with cuBLASLt promoted
+
+The live engine is now `combined_precise_qkv_cublaslt`. Relative to the
+passing precise PV plus QKV candidate (769.789834 tokens/s), its only source
+change sets PyTorch's preferred BLAS library to cuBLASLt during decode graph
+warmup and capture, then restores the prior setting. That capture preference
+passed independently on the QKV baseline at 775.994986 tokens/s. Their
+interaction remains unmeasured. The native prefill plus precise PV repair
+remains queued under run `43987bca-d75b-4ea6-97e3-1e7a84cff71f` and
+submission `2704f25c-4d9a-431f-963a-e2a4c9097cfa`.
+
+`output_down_norm_precise_qkv` is registered unmeasured at low priority 50,
+behind the isolated down projection result. Its custom down projection and
+norm take two kernel launches, the same count as the passing 769.789834
+baseline's separate down projection and norm. No launch-count improvement is
+claimed. The comparison CLI and documentation remain outside the engine.

@@ -8,6 +8,8 @@ from transformers import AutoModelForCausalLM
 
 from kernels.rmsnorm import rms_norm
 from kernels.residual_norm import add_norm
+from kernels.decode_fusion import swiglu
+from kernels.output_projection import down_project_add_norm
 from attention import install_direct_gqa
 
 
@@ -97,15 +99,24 @@ def _decode_last(model, token_ids, cache, positions):
             layer.post_attention_layernorm.weight,
             layer.post_attention_layernorm.variance_epsilon,
         )
-        mlp_output = layer.mlp(mlp_input)
         if index + 1 < len(layers):
             next_norm = layers[index + 1].input_layernorm
         else:
             next_norm = base.norm
-        residual, normalized = add_norm(
-            after_attention, mlp_output,
-            next_norm.weight, next_norm.variance_epsilon,
-        )
+        if residual.shape[0] <= 16:
+            gate = layer.mlp.gate_proj(mlp_input)
+            up = layer.mlp.up_proj(mlp_input)
+            product = swiglu(gate, up)
+            residual, normalized = down_project_add_norm(
+                product, layer.mlp.down_proj.weight, after_attention,
+                next_norm.weight, next_norm.variance_epsilon,
+            )
+        else:
+            mlp_output = layer.mlp(mlp_input)
+            residual, normalized = add_norm(
+                after_attention, mlp_output,
+                next_norm.weight, next_norm.variance_epsilon,
+            )
     return model.lm_head(normalized).argmax(-1)
 
 
@@ -149,21 +160,16 @@ class Engine:
         return _decode_last(self.model, self._input, self._cache, self._position)
 
     def _capture(self, token, position):
-        previous_blas = torch.backends.cuda.preferred_blas_library()
-        try:
-            torch.backends.cuda.preferred_blas_library("cublaslt")
-            stream = torch.cuda.Stream()
-            stream.wait_stream(torch.cuda.current_stream())
-            with torch.cuda.stream(stream):
-                self._input.copy_(token)
-                self._position.fill_(position)
-                self._decode()  # warm kernels and allocator on the capture stream
-                graph = torch.cuda.CUDAGraph()
-                with torch.cuda.graph(graph):
-                    output = self._decode()
-            torch.cuda.current_stream().wait_stream(stream)
-        finally:
-            torch.backends.cuda.preferred_blas_library(previous_blas)
+        stream = torch.cuda.Stream()
+        stream.wait_stream(torch.cuda.current_stream())
+        with torch.cuda.stream(stream):
+            self._input.copy_(token)
+            self._position.fill_(position)
+            self._decode()  # warm kernels and allocator on the capture stream
+            graph = torch.cuda.CUDAGraph()
+            with torch.cuda.graph(graph):
+                output = self._decode()
+        torch.cuda.current_stream().wait_stream(stream)
         self._graph = graph
         self._graph_output = output
 

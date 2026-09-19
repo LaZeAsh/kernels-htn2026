@@ -29,3 +29,15 @@ DRYFT_API=https://htn.dryft.ai python3 agent/loop.py <run-id> \
 
 `package.py` can still validate and hash an engine archive locally. The
 platform no longer accepts direct archive uploads.
+
+Compare two saved official runs without API access, naming the candidate
+first and its actual baseline second:
+
+```sh
+python3 agent/compare.py <candidate-run-id> <baseline-run-id>
+```
+
+The comparison shows both source commits and ranked scores, then matched
+public TTFT, TPOT and throughput. Positive advantage favors the candidate;
+invalid or absent metrics have no delta. Failed runs have no ranked score
+delta.

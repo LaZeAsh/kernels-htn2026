@@ -140,11 +140,21 @@
     },
     {
       "id": "v27_native_gqa_prefill_precise_qkv",
+      "path": "agent/candidates/native_gqa_prefill_precise_qkv",
+      "disposition": "queued",
+      "priority": 5,
+      "reason": "Targeted repair of hidden-failed native GQA prefill: only grouped decode PV kernel changed to passing two-term BF16 probability dot from combined_precise_qkv; prefill source unchanged.",
+      "numericalRisk": "Combined hidden behavior unmeasured despite passing transplanted PV kernel.",
+      "commitSha": "0ddc22194bf691233885fc8c317c02cdb0db10be",
+      "submissionId": "2704f25c-4d9a-431f-963a-e2a4c9097cfa",
+      "runId": "43987bca-d75b-4ea6-97e3-1e7a84cff71f"
+    },
+    {
+      "id": "v29_combined_precise_qkv_cublaslt",
       "path": "engine",
       "disposition": "active",
       "priority": 5,
-      "reason": "Targeted repair of hidden-failed native GQA prefill: only grouped decode PV kernel changed to passing two-term BF16 probability dot from combined_precise_qkv; prefill source unchanged.",
-      "numericalRisk": "Combined hidden behavior unmeasured despite passing transplanted PV kernel."
+      "reason": "Only cuBLASLt decode capture preference from passing 775.994986 stage applied to passing 769.789834 precise PV plus QKV combination; interaction unmeasured."
     },
     {
       "id": "v10_combined_tc_residual",
@@ -249,24 +259,44 @@
     {
       "id": "v24_cublaslt_decode_qkv",
       "path": "agent/candidates/cublaslt_decode_qkv",
-      "disposition": "measuring",
+      "disposition": "passed",
       "reason": "Prefer cuBLASLt during decode graph warmup and capture on passing QKV baseline; may affect all native Linear GEMMs in captured decode, independent from other staged kernels.",
       "priority": 10,
       "commitSha": "3eab3f69e265bd351f691aa3997a8630183ffd08",
       "submissionId": "9e0fcaf9-2686-47af-9c58-6b3e5d4fe8fa",
-      "runId": "3c47d87f-2030-4c0e-962c-4c03c01abcd2"
+      "runId": "3c47d87f-2030-4c0e-962c-4c03c01abcd2",
+      "ranked": true,
+      "scoreTokensPerSecond": 775.9949864481964
     },
     {
       "id": "v25_transposed_mlp_qkv",
       "path": "agent/candidates/transposed_mlp_qkv",
       "disposition": "unmeasured",
-      "reason": "Decode MLP weight layout/scheduling variant on passing QKV baseline."
+      "reason": "Decode MLP weight layout/scheduling variant on passing QKV baseline.",
+      "priority": 20
     },
     {
       "id": "v26_parallel_mlp_qkv",
       "path": "agent/candidates/parallel_mlp_qkv",
       "disposition": "unmeasured",
-      "reason": "Parallel decode MLP scheduling variant on passing QKV baseline."
+      "reason": "Parallel decode MLP scheduling variant on passing QKV baseline.",
+      "priority": 10
+    },
+    {
+      "id": "v28_autotuned_fused_mlp_precise_qkv",
+      "path": "agent/candidates/autotuned_fused_mlp_precise_qkv",
+      "disposition": "unmeasured",
+      "priority": 25,
+      "reason": "Autotuned split SwiGLU decode B<=16 on passing combined precise PV plus QKV baseline 769.789834; original BF16 boundaries, other paths unchanged.",
+      "numericalRisk": "custom gate/up GEMM reduction order and warmup autotune; hidden correctness, latency, and load budget unmeasured"
+    },
+    {
+      "id": "v30_output_down_norm_precise_qkv",
+      "path": "agent/candidates/output_down_norm_precise_qkv",
+      "disposition": "unmeasured",
+      "priority": 50,
+      "reason": "Custom down projection and norm on passing precise PV plus QKV baseline; wait for isolated down projection result.",
+      "numericalRisk": "custom split-K down projection and norm interaction unmeasured"
     }
   ]
 }
