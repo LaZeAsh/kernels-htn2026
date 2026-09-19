@@ -4,7 +4,6 @@ Copy this directory's contents to submission root only after public validation.
 """
 
 import torch
-from torch.nn.attention import SDPBackend, sdpa_kernel
 from transformers import AutoModelForCausalLM
 
 from kernels.rmsnorm import rms_norm
@@ -83,6 +82,7 @@ class Engine:
             model_path, torch_dtype=torch.bfloat16,
             attn_implementation="sdpa", local_files_only=True,
         ).eval().to("cuda:0"))
+        self._mlp_aux_stream = torch.cuda.Stream(device="cuda:0")
         base = self.model.model
         base.norm = FusedRMSNorm(base.norm)
         for layer in base.layers:
@@ -90,7 +90,7 @@ class Engine:
             layer.post_attention_layernorm = FusedRMSNorm(layer.post_attention_layernorm)
             layer.self_attn.q_norm = FusedRMSNorm(layer.self_attn.q_norm)
             layer.self_attn.k_norm = FusedRMSNorm(layer.self_attn.k_norm)
-            install_direct_gqa(layer)
+            install_direct_gqa(layer, self._mlp_aux_stream)
         self._graph_shape = None
         self._cache = None
         self._graph = None
@@ -141,8 +141,7 @@ class Engine:
             self._cache.prefill_mode = True
             for layer in self.model.model.layers:
                 layer.mlp.decode_mode = False
-            with sdpa_kernel(SDPBackend.FLASH_ATTENTION):
-                current = _forward_last(self.model, prompt, self._cache, positions, None)
+            current = _forward_last(self.model, prompt, self._cache, positions, None)
             self._cache.prefill_mode = False
             for layer in self.model.model.layers:
                 layer.mlp.decode_mode = True

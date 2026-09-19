@@ -139,6 +139,14 @@
       "scoreTokensPerSecond": 769.7898343566247
     },
     {
+      "id": "v27_native_gqa_prefill_precise_qkv",
+      "path": "engine",
+      "disposition": "active",
+      "priority": 5,
+      "reason": "Targeted repair of hidden-failed native GQA prefill: only grouped decode PV kernel changed to passing two-term BF16 probability dot from combined_precise_qkv; prefill source unchanged.",
+      "numericalRisk": "Combined hidden behavior unmeasured despite passing transplanted PV kernel."
+    },
+    {
       "id": "v10_combined_tc_residual",
       "path": "agent/candidates/combined_tc_residual",
       "disposition": "withdrawn",
@@ -211,11 +219,15 @@
     {
       "id": "v21_native_gqa_prefill_qkv",
       "path": "agent/candidates/native_gqa_prefill_qkv",
-      "disposition": "measuring",
+      "disposition": "rejected",
       "reason": "Native GQA prefill on passing QKV split baseline 745.470; supersedes v15 on older 709.857 base.",
       "commitSha": "df8e307e46ae33c0c9f246415b492ae70e510a3f",
       "submissionId": "f6935a08-6098-4563-afa1-f9ed68f87bdd",
-      "runId": "94c75a6f-2519-4151-aecf-a03c2b636703"
+      "runId": "94c75a6f-2519-4151-aecf-a03c2b636703",
+      "resultStatus": "failed",
+      "failureCode": "incorrect_output",
+      "ranked": false,
+      "rejectionReason": "Official hidden correctness failure despite all public passing; no unchanged retry."
     },
     {
       "id": "v22_output_o_fused",
@@ -226,20 +238,35 @@
     },
     {
       "id": "v23_output_down_fused",
-      "path": "engine",
-      "disposition": "active",
+      "path": "agent/candidates/output_down_fused",
+      "disposition": "queued",
       "numericalRisk": "custom split-K MLP down projection only; passing QKV base for other path",
-      "priority": 20
+      "priority": 20,
+      "commitSha": "4a46c5ab4de8c8f498275d24464b1ea58c983641",
+      "submissionId": "a0f7d5c7-3daa-47b0-a54d-64d0bfa23761",
+      "runId": "32b6cfd5-b34c-4295-bdd8-7ac129b4618b"
     },
     {
       "id": "v24_cublaslt_decode_qkv",
       "path": "agent/candidates/cublaslt_decode_qkv",
-      "disposition": "queued",
+      "disposition": "measuring",
       "reason": "Prefer cuBLASLt during decode graph warmup and capture on passing QKV baseline; may affect all native Linear GEMMs in captured decode, independent from other staged kernels.",
       "priority": 10,
       "commitSha": "3eab3f69e265bd351f691aa3997a8630183ffd08",
       "submissionId": "9e0fcaf9-2686-47af-9c58-6b3e5d4fe8fa",
       "runId": "3c47d87f-2030-4c0e-962c-4c03c01abcd2"
+    },
+    {
+      "id": "v25_transposed_mlp_qkv",
+      "path": "agent/candidates/transposed_mlp_qkv",
+      "disposition": "unmeasured",
+      "reason": "Decode MLP weight layout/scheduling variant on passing QKV baseline."
+    },
+    {
+      "id": "v26_parallel_mlp_qkv",
+      "path": "agent/candidates/parallel_mlp_qkv",
+      "disposition": "unmeasured",
+      "reason": "Parallel decode MLP scheduling variant on passing QKV baseline."
     }
   ]
 }

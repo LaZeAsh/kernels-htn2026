@@ -643,3 +643,32 @@ passing QKV baseline. Only decode MLP `down_proj` and its residual add use
 the custom split-K projection. Attention `o_proj` remains the native Linear,
 and prefill follows the native layer path. The passing combined precise PV
 plus QKV snapshot remains archived separately at 769.789834 tokens/s.
+
+## Native GQA prefill failed; output down queued
+
+The native GQA prefill candidate failed official run
+`94c75a6f-2519-4151-aecf-a03c2b636703` with `incorrect_output` on a
+hidden workload. All public workloads passed at 194.590, 408.422 and
+2500.318 tokens/s. The staged source and full run report remain archived;
+do not retry it unchanged. Its separate two-term PV repair is in preparation
+and has no result yet.
+
+The isolated output down projection candidate was accepted at actual source
+commit `4a46c5ab4de8c8f498275d24464b1ea58c983641`, submission
+`a0f7d5c7-3daa-47b0-a54d-64d0bfa23761`, official run
+`32b6cfd5-b34c-4295-bdd8-7ac129b4618b`. It was queued when recorded.
+The cuBLASLt scheduling run began measuring at 21:38:23 UTC. The separate
+`transposed_mlp_qkv` and `parallel_mlp_qkv` stages are registered unmeasured
+on the passing QKV baseline. Live engine source is unchanged.
+
+## Native prefill plus precise PV repair promoted
+
+The live engine is now `native_gqa_prefill_precise_qkv`, a targeted follow-up
+to the hidden-failed native GQA prefill run. Relative to that archived source,
+only `kernels/grouped_tc.py` differs: it is bytewise the two-term BF16
+probability PV kernel from the passing precise PV plus QKV combination.
+The direct native GQA prefill adapter, Flash-only context, QKV projection,
+and other source remain unchanged. This tests whether the passing PV change
+restores hidden correctness in the native prefill variant; no result is yet
+attributed. The queued output down projection candidate remains archived
+with its existing run IDs. `transposed_mlp_qkv` remains staged separately.
