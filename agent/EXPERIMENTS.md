@@ -135,3 +135,54 @@ was copied into `engine/` for the next official run. Static syntax, diff and
 package checks pass (five source files, 5,397-byte archive). No GPU result is
 available yet. The earlier packed V4/V5 candidates remain staged but are not
 on this correctness baseline.
+
+## V4 measuring; native-projection fusion staged
+
+V4 native-projection direct GQA was pushed as commit `5d5fedb`, creating
+submission `6d95e6b0-791e-4953-9e92-a2a73326ca8e` and official run
+`8544b784-1c73-41b6-ba40-8552fb99eae8`. It was validating at this entry;
+no outcome is assumed.
+
+`agent/candidates/fused_native_decode/` stages a follow-up based on V4. It
+passes the three separate native BF16 Q/K/V projection tensors to the fused
+Q/K normalization, RoPE and KV-write kernel. SwiGLU consumes separate native
+gate and up projection tensors. No packed GEMM weights or source modules are
+changed; prefill, including one-token prompts, follows the native projection,
+normalization, RoPE, SDPA and MLP order. The stage has six source files and a
+6,761-byte package, with syntax/diff/package checks passing. It will remain
+unpromoted until V4's correctness and latency are known.
+
+## Staged V6: grouped Tensor Core decode attention
+
+`agent/candidates/grouped_tc/` starts from native-projection V4, not from V5
+fusion or the failed packed candidate. Prefill remains native causal SDPA. For
+decode, one Triton program handles one KV head and its four query heads,
+loading each K/V tile once for those heads. A `[16,128]` padded BF16 Q tile
+multiplies a `[128,64]` K tile with FP32 scores. Online softmax statistics stay
+FP32; probabilities round to BF16 for the Tensor Core PV dot; partial PV and
+split reduction accumulate FP32 before the BF16 output store. Every valid key
+is included, with no sparse or approximate context selection.
+
+Split count is fixed by batch and prompt shape: target about 128 CTAs across
+`B*8*split`, capped by prompt-length 64-token tiles. Splits cover contiguous,
+nonoverlapping key ranges; the last split includes decode growth. Empty blocks
+are skipped on the device. Pure-Python partition checks passed for public and
+small-prompt shapes. Syntax, diff and package checks pass (five source files,
+5,692 bytes). Triton 3.1 compilation, output agreement and speed remain
+unverified; V4 remains live while its run completes.
+
+## V4 passed; V5 promoted
+
+V4 native-projection direct GQA passed official run
+`8544b784-1c73-41b6-ba40-8552fb99eae8`, scoring 449.552 tokens/s at
+rank 39. Public-shaped TPOT was 7.654, 12.797 and 9.395 ms; TTFT was 28.12,
+163.91 and 151.55 ms. This is the best ranked result so far. Its source
+remains at `agent/candidates/gqa_native/`.
+
+The native-projection elementwise fusion candidate was copied from
+`agent/candidates/fused_native_decode/` to `engine/` for its own official run.
+It adds decode-only Q/K normalization, RoPE and KV-write fusion plus SwiGLU
+fusion, with separate native projection modules. Static syntax, diff and
+package checks pass (six source files, 6,774 bytes). Triton compilation and
+greedy-token correctness remain unverified until the run. The grouped Tensor
+Core candidate remains staged separately.

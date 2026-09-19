@@ -35,8 +35,22 @@
     },
     {
       "id": "v4_gqa_native",
+      "path": "agent/candidates/gqa_native",
+      "disposition": "passed",
+      "commitSha": "5d5fedb5620fbc2f04cdc11d984fedb49d2cea16",
+      "submissionId": "6d95e6b0-791e-4953-9e92-a2a73326ca8e",
+      "runId": "8544b784-1c73-41b6-ba40-8552fb99eae8",
+      "scoreTokensPerSecond": 449.55247219330954
+    },
+    {
+      "id": "v5_fused_native_decode",
       "path": "engine",
       "disposition": "active"
+    },
+    {
+      "id": "v6_grouped_tc",
+      "path": "agent/candidates/grouped_tc",
+      "disposition": "unmeasured"
     }
   ]
 }

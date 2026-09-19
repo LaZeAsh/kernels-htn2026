@@ -138,12 +138,8 @@ class Engine:
         positions = torch.arange(prompt_length, device="cuda:0")
         with torch.inference_mode():
             self._cache.prefill_mode = True
-            for layer in self.model.model.layers:
-                layer.mlp.decode_mode = False
             current = _forward_last(self.model, prompt, self._cache, positions, None)
             self._cache.prefill_mode = False
-            for layer in self.model.model.layers:
-                layer.mlp.decode_mode = True
             yield current[:, 0].tolist()
             if max_new_tokens == 1:
                 return
