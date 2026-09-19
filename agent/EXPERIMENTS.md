@@ -725,3 +725,37 @@ behind the isolated down projection result. Its custom down projection and
 norm take two kernel launches, the same count as the passing 769.789834
 baseline's separate down projection and norm. No launch-count improvement is
 claimed. The comparison CLI and documentation remain outside the engine.
+
+## Combined Lt queued; public decode comparison
+
+The precise PV plus QKV with cuBLASLt candidate was accepted from source
+commit `f94a42d448b9e702aa2b92f9902ad166e740fe12` as submission
+`364b7917-6191-4291-9312-b8fde89218e1`, official run
+`d5421685-4526-4ef7-862d-7c32abaa8c13`. It was queued when recorded;
+no result is attributed yet. Live engine source remains unchanged.
+
+The passing cuBLASLt scheduling run (775.994986 tokens/s) compared with its
+QKV baseline (745.470297 tokens/s) shows public TPOT improvements of 2.85%,
+2.07% and 2.69%: 4.581 vs 4.716 ms, 5.252 vs 5.363 ms, and 5.344 vs
+5.492 ms. Public TTFT also varied, but prefill source was unchanged, so that
+variation is not credited to the decode-only scheduling change. The full
+comparison can be reproduced with `agent/compare.py` using run IDs
+`3c47d87f-2030-4c0e-962c-4c03c01abcd2` and
+`27d7715d-f2ac-48a3-9275-db1c25e0845e`.
+
+## Output down passed; parallel MLP rebased on cuBLASLt
+
+The isolated output down projection candidate passed official run
+`32b6cfd5-b34c-4295-bdd8-7ac129b4618b` at source commit
+`4a46c5ab4de8c8f498275d24464b1ea58c983641`, scoring 759.568012
+tokens/s. This is 1.89% above its 745.470297 QKV baseline and below the
+775.994986 cuBLASLt best. Public TPOT improved 0.32%, 1.45% and 1.18%
+relative to QKV. It remains a passing isolated memory scheduling change.
+
+The live engine is now `parallel_mlp_cublaslt`, based on the passing cuBLASLt
+QKV candidate at 775.994986 tokens/s. Relative to that source, only the
+auxiliary stream decode MLP path differs. Relative to the earlier parallel
+MLP stage, only the passing cuBLASLt preference around graph warmup and
+capture was added. Native prefill and the B>16 fallback remain. The old
+parallel stage is archived but withdrawn as superseded. CUDA graph stream
+interaction has no official correctness or speed result yet.

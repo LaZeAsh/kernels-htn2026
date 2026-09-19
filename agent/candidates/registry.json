@@ -151,10 +151,21 @@
     },
     {
       "id": "v29_combined_precise_qkv_cublaslt",
+      "path": "agent/candidates/combined_precise_qkv_cublaslt",
+      "disposition": "queued",
+      "priority": 5,
+      "reason": "Only cuBLASLt decode capture preference from passing 775.994986 stage applied to passing 769.789834 precise PV plus QKV combination; interaction unmeasured.",
+      "commitSha": "f94a42d448b9e702aa2b92f9902ad166e740fe12",
+      "submissionId": "364b7917-6191-4291-9312-b8fde89218e1",
+      "runId": "d5421685-4526-4ef7-862d-7c32abaa8c13"
+    },
+    {
+      "id": "v31_parallel_mlp_cublaslt",
       "path": "engine",
       "disposition": "active",
-      "priority": 5,
-      "reason": "Only cuBLASLt decode capture preference from passing 775.994986 stage applied to passing 769.789834 precise PV plus QKV combination; interaction unmeasured."
+      "priority": 10,
+      "reason": "Parallel decode MLP streams from unmeasured old stage rebased onto passing cuBLASLt scheduling 775.994986; only MLP stream path differs from passing baseline.",
+      "numericalRisk": "CUDA graph multi-stream interaction and hidden correctness unmeasured"
     },
     {
       "id": "v10_combined_tc_residual",
@@ -249,12 +260,14 @@
     {
       "id": "v23_output_down_fused",
       "path": "agent/candidates/output_down_fused",
-      "disposition": "queued",
+      "disposition": "passed",
       "numericalRisk": "custom split-K MLP down projection only; passing QKV base for other path",
       "priority": 20,
       "commitSha": "4a46c5ab4de8c8f498275d24464b1ea58c983641",
       "submissionId": "a0f7d5c7-3daa-47b0-a54d-64d0bfa23761",
-      "runId": "32b6cfd5-b34c-4295-bdd8-7ac129b4618b"
+      "runId": "32b6cfd5-b34c-4295-bdd8-7ac129b4618b",
+      "ranked": true,
+      "scoreTokensPerSecond": 759.5680115940339
     },
     {
       "id": "v24_cublaslt_decode_qkv",
@@ -278,9 +291,10 @@
     {
       "id": "v26_parallel_mlp_qkv",
       "path": "agent/candidates/parallel_mlp_qkv",
-      "disposition": "unmeasured",
+      "disposition": "withdrawn",
       "reason": "Parallel decode MLP scheduling variant on passing QKV baseline.",
-      "priority": 10
+      "priority": 10,
+      "withdrawalReason": "Superseded by parallel_mlp_cublaslt on passing 775.994986 baseline; old source retained."
     },
     {
       "id": "v28_autotuned_fused_mlp_precise_qkv",
