@@ -205,9 +205,12 @@ def plan_next_edit(history: list[dict]) -> str:
             return f"Review {candidate['id']} {code} before another experiment; {best_label}."
         if detail.get("state") != "succeeded" or result.get("ranked") is not True:
             return f"Review {candidate['id']} run {run_id} ({code or detail.get('state')}); {best_label}."
-    for candidate in candidates:
-        if candidate.get("disposition") not in {"rejected", "withdrawn"} and not candidate.get("runId"):
-            return f"Stage {candidate['id']} from {candidate['path']}; {best_label}."
+    staged = [candidate for candidate in candidates
+              if candidate.get("disposition") not in {"rejected", "withdrawn"}
+              and not candidate.get("runId")]
+    if staged:
+        candidate = min(staged, key=lambda c: c.get("priority", 1000))
+        return f"Stage {candidate['id']} from {candidate['path']}; {best_label}."
     return f"All registered candidates measured; {best_label}."
 
 

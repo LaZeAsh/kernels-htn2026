@@ -118,27 +118,32 @@
     {
       "id": "v18_gqa_more_splits",
       "path": "agent/candidates/gqa_more_splits",
-      "disposition": "queued",
+      "disposition": "passed",
       "reason": "One-line grouped GQA split target change from 128 to 512 on passing QKV baseline; tests parallelism without other source changes.",
       "commitSha": "5fc732acf07aeb55b2b4df2096dfbb7e1059c930",
       "submissionId": "009185bb-8ec4-4fb0-a007-38782af55a0b",
-      "runId": "4450c9d9-aff3-45c3-b2eb-73634e665af3"
+      "runId": "4450c9d9-aff3-45c3-b2eb-73634e665af3",
+      "ranked": true,
+      "scoreTokensPerSecond": 745.8902894668955
     },
     {
       "id": "v20_combined_precise_qkv",
       "path": "agent/candidates/combined_precise_qkv",
-      "disposition": "queued",
+      "disposition": "passed",
       "reason": "Combine passing precise PV 720.684 candidate with passing QKV split 745.470 decode projection only; interaction unmeasured.",
-      "numericalRisk": "combined changes unmeasured on hidden workloads",
+      "numericalRisk": "Combined path passed official hidden correctness.",
       "commitSha": "4e52c3831ad2bd45b5605304effbdcf7b756efd0",
       "submissionId": "e503080a-2c33-48b9-ba11-372774648bd4",
-      "runId": "fa4fba3d-2bae-4b98-a285-06ce21f5bb90"
+      "runId": "fa4fba3d-2bae-4b98-a285-06ce21f5bb90",
+      "ranked": true,
+      "scoreTokensPerSecond": 769.7898343566247
     },
     {
       "id": "v10_combined_tc_residual",
       "path": "agent/candidates/combined_tc_residual",
-      "disposition": "unmeasured",
-      "reason": "Postponed isolation candidate if precise PV fix fails; passing grouped TC plus residual fusion, without prefill fusion."
+      "disposition": "withdrawn",
+      "reason": "Postponed isolation candidate if precise PV fix fails; passing grouped TC plus residual fusion, without prefill fusion.",
+      "withdrawalReason": "Isolation no longer prioritized after precise PV repair passed official correctness; source retained."
     },
     {
       "id": "v11_combined_tc_prefill_residual",
@@ -193,7 +198,8 @@
       "id": "v17_autotuned_mlp_linear",
       "path": "agent/candidates/autotuned_mlp_linear",
       "disposition": "unmeasured",
-      "reason": "Independent decode MLP linear scheduling experiment based on passed v7 grouped TC."
+      "reason": "Independent decode MLP linear scheduling experiment based on passed v7 grouped TC.",
+      "priority": 40
     },
     {
       "id": "v19_output_proj_fused",
@@ -204,27 +210,33 @@
     },
     {
       "id": "v21_native_gqa_prefill_qkv",
-      "path": "engine",
-      "disposition": "active",
-      "reason": "Native GQA prefill on passing QKV split baseline 745.470; supersedes v15 on older 709.857 base."
+      "path": "agent/candidates/native_gqa_prefill_qkv",
+      "disposition": "measuring",
+      "reason": "Native GQA prefill on passing QKV split baseline 745.470; supersedes v15 on older 709.857 base.",
+      "commitSha": "df8e307e46ae33c0c9f246415b492ae70e510a3f",
+      "submissionId": "f6935a08-6098-4563-afa1-f9ed68f87bdd",
+      "runId": "94c75a6f-2519-4151-aecf-a03c2b636703"
     },
     {
       "id": "v22_output_o_fused",
       "path": "agent/candidates/output_o_fused",
       "disposition": "unmeasured",
-      "numericalRisk": "custom split-K attention output projection only; passing QKV base for other path"
+      "numericalRisk": "custom split-K attention output projection only; passing QKV base for other path",
+      "priority": 30
     },
     {
       "id": "v23_output_down_fused",
       "path": "agent/candidates/output_down_fused",
       "disposition": "unmeasured",
-      "numericalRisk": "custom split-K MLP down projection only; passing QKV base for other path"
+      "numericalRisk": "custom split-K MLP down projection only; passing QKV base for other path",
+      "priority": 20
     },
     {
       "id": "v24_cublaslt_decode_qkv",
-      "path": "agent/candidates/cublaslt_decode_qkv",
-      "disposition": "unmeasured",
-      "reason": "Native cuBLASLt decode QKV GEMMs on passing QKV baseline; independent projection experiment."
+      "path": "engine",
+      "disposition": "active",
+      "reason": "Prefer cuBLASLt during decode graph warmup and capture on passing QKV baseline; may affect all native Linear GEMMs in captured decode, independent from other staged kernels.",
+      "priority": 10
     }
   ]
 }

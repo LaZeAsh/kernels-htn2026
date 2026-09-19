@@ -594,3 +594,38 @@ context. The original native projections, Q/K norm, RoPE and cache updates
 remain. This changes prefill attention arithmetic and must pass its own
 hidden correctness and latency gates. `cublaslt_decode_qkv` is separately
 registered as an unmeasured decode projection experiment.
+
+## Native prefill queued and staged priority
+
+The native GQA prefill on QKV baseline was accepted at actual source commit
+`df8e307e46ae33c0c9f246415b492ae70e510a3f`, submission
+`f6935a08-6098-4563-afa1-f9ed68f87bdd`, official run
+`94c75a6f-2519-4151-aecf-a03c2b636703`. It was queued when recorded;
+no correctness or score is attributed. The earlier grouped GQA plus residual
+isolation stage is withdrawn from scheduling because the precise PV repair
+passed hidden correctness; its source remains archived.
+
+After pending runs and terminal failures are handled, the decision helper
+uses explicit staged priorities: cuBLASLt decode QKV first, then MLP down
+projection only, then attention output projection only, then autotuned MLP
+linear. Priority does not bypass waiting for already accepted runs or their
+failure review. No engine source changed.
+
+## Combined precise PV plus QKV leads; cuBLASLt scheduling live
+
+The precise PV plus QKV combination passed official run
+`fa4fba3d-2bae-4b98-a285-06ce21f5bb90` at source commit
+`4e52c3831ad2bd45b5605304effbdcf7b756efd0`, scoring 769.789834
+tokens/s, the new best. The increased grouped GQA split count also passed
+run `4450c9d9-aff3-45c3-b2eb-73634e665af3` at commit
+`5fc732acf07aeb55b2b4df2096dfbb7e1059c930`, scoring 745.890289
+tokens/s, only a small gain over its 745.470297 QKV baseline. Independent
+isolation tests continue from the original QKV baseline. Native GQA prefill
+is measuring.
+
+The live engine is now `cublaslt_decode_qkv`. Relative to the passing QKV
+baseline, its only source change sets PyTorch's preferred BLAS library to
+cuBLASLt during decode warmup and CUDA graph capture, restoring the previous
+preference afterward. This is a scheduling experiment for native Linear GEMMs
+in the captured decode step; it may affect more than Q/K/V projections.
+No correctness or speed result is attributed to this stage yet.

@@ -1,7 +1,6 @@
 """Native Qwen3 projections and prefill; direct full-context GQA on decode."""
 
 import types
-import torch.nn.functional as F
 
 from kernels.decode_fusion import qk_norm_rope_cache, swiglu
 from kernels.qkv_split import project_norm_rope_cache
@@ -60,23 +59,13 @@ def _attention_forward(
             key_states, value_states = past_key_value.update(
                 key_states, value_states, self.layer_idx, cache_kwargs
             )
-        if past_key_value is not None and past_key_value.prefill_mode:
-            # Preserve native projection, per-head norm, RoPE and cache update.
-            length = input_shape[-1]
-            attn_output = F.scaled_dot_product_attention(
-                query_states, key_states, value_states,
-                attn_mask=None, dropout_p=0.0, is_causal=length > 1,
-                scale=self.scaling, enable_gqa=True,
-            ).transpose(1, 2).contiguous()
-            attn_weights = None
-        else:
-            attention_interface = ALL_ATTENTION_FUNCTIONS[self.config._attn_implementation]
-            attn_output, attn_weights = attention_interface(
-                self, query_states, key_states, value_states, attention_mask,
-                dropout=0.0 if not self.training else self.attention_dropout,
-                scaling=self.scaling, sliding_window=self.sliding_window,
-                **kwargs,
-            )
+        attention_interface = ALL_ATTENTION_FUNCTIONS[self.config._attn_implementation]
+        attn_output, attn_weights = attention_interface(
+            self, query_states, key_states, value_states, attention_mask,
+            dropout=0.0 if not self.training else self.attention_dropout,
+            scaling=self.scaling, sliding_window=self.sliding_window,
+            **kwargs,
+        )
     attn_output = attn_output.reshape(*input_shape, -1).contiguous()
     return self.o_proj(attn_output), attn_weights
 
