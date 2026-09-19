@@ -3,7 +3,7 @@
 import types
 
 from kernels.decode_fusion import qk_norm_rope_cache, swiglu
-from kernels.qkv_split import project_norm_rope_cache
+from kernels.mlp_split import split_swiglu
 from transformers.models.qwen3.modeling_qwen3 import (
     ALL_ATTENTION_FUNCTIONS,
     apply_rotary_pos_emb,
@@ -21,26 +21,16 @@ def _attention_forward(
     cos, sin = position_embeddings
     if (input_shape[-1] == 1 and past_key_value is not None
             and not past_key_value.prefill_mode):
-        if hidden_states.shape[0] <= 16:
-            query_states = project_norm_rope_cache(
-                hidden_states, self.q_proj.weight, self.k_proj.weight,
-                self.v_proj.weight, self.q_norm.weight, self.k_norm.weight,
-                cos, sin, cache_position,
-                past_key_value.keys[self.layer_idx],
-                past_key_value.values[self.layer_idx],
-                self.q_norm.variance_epsilon, self.k_norm.variance_epsilon,
-            )
-        else:
-            q = self.q_proj(hidden_states)
-            k = self.k_proj(hidden_states)
-            v = self.v_proj(hidden_states)
-            query_states = qk_norm_rope_cache(
-                q, k, v, self.q_norm.weight, self.k_norm.weight,
-                cos, sin, cache_position,
-                past_key_value.keys[self.layer_idx],
-                past_key_value.values[self.layer_idx],
-                self.q_norm.variance_epsilon, self.k_norm.variance_epsilon,
-            )
+        q = self.q_proj(hidden_states)
+        k = self.k_proj(hidden_states)
+        v = self.v_proj(hidden_states)
+        query_states = qk_norm_rope_cache(
+            q, k, v, self.q_norm.weight, self.k_norm.weight,
+            cos, sin, cache_position,
+            past_key_value.keys[self.layer_idx],
+            past_key_value.values[self.layer_idx],
+            self.q_norm.variance_epsilon, self.k_norm.variance_epsilon,
+        )
         attn_output = grouped_tc_decode(
             query_states, past_key_value.keys[self.layer_idx],
             past_key_value.values[self.layer_idx], cache_position, self.scaling,
@@ -81,9 +71,12 @@ def install_direct_gqa(layer):
 
 def _mlp_forward(self, x):
     if self.decode_mode:
-        gate = self.gate_proj(x)
-        up = self.up_proj(x)
-        product = swiglu(gate, up)
+        if x.shape[0] <= 16:
+            product = split_swiglu(x, self.gate_proj.weight, self.up_proj.weight)
+        else:
+            gate = self.gate_proj(x)
+            up = self.up_proj(x)
+            product = swiglu(gate, up)
     else:
         product = self.act_fn(self.gate_proj(x)) * self.up_proj(x)
     return self.down_proj(product)

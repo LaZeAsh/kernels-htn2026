@@ -111,14 +111,23 @@
     },
     {
       "id": "v11_combined_tc_prefill_residual",
-      "path": "engine",
-      "disposition": "active"
+      "path": "agent/candidates/combined_tc_prefill_residual",
+      "disposition": "validating",
+      "commitSha": "587f4410734c23806f81d7de44013c141ee9f373",
+      "submissionId": "a048e10e-1516-455d-8df7-64708351daa2",
+      "runId": "b4768620-111c-41ae-8330-8984b2e7dc15"
     },
     {
       "id": "v12_qkv_split_fused",
-      "path": "agent/candidates/qkv_split_fused",
-      "disposition": "unmeasured",
+      "path": "engine",
+      "disposition": "active",
       "numericalRisk": "high: custom QKV projection GEMM; indexing reviewed, GPU result absent"
+    },
+    {
+      "id": "v13_mlp_split_fused",
+      "path": "agent/candidates/mlp_split_fused",
+      "disposition": "unmeasured",
+      "numericalRisk": "higher: custom decode gate/up GEMM tiling and BF16 reduction order; based on passed v7 grouped TC, native prefill"
     }
   ]
 }

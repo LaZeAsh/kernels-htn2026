@@ -398,3 +398,19 @@ run. It combines the independently passing grouped Tensor Core GQA and
 prefill/residual changes; their interaction has not yet been measured. The
 custom MLP kernel is absent from the live package. QKV split remains an
 unmeasured, higher-risk stage.
+
+## Combined run validating; QKV split next
+
+The combined grouped GQA, prefill and residual candidate was accepted as
+submission `a048e10e-1516-455d-8df7-64708351daa2`, official run
+`b4768620-111c-41ae-8330-8984b2e7dc15`, source commit
+`587f4410734c23806f81d7de44013c141ee9f373`. It began validation at
+20:44:32 UTC. Its source remains archived at
+`agent/candidates/combined_tc_prefill_residual/`.
+
+The live engine now uses the separate `qkv_split_fused` candidate based on the
+passing 709.857148 tokens/s grouped GQA source. It changes the decode Q/K/V
+projection path, keeping native prefill and the passing grouped attention
+kernel; no result is attributed to it yet. The separate `mlp_split_fused`
+variant is registered as a later unmeasured experiment on the same passing
+base. It is not merged with QKV split.
