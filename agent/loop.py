@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import math
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,7 +23,9 @@ def _latency_ratios(shape: dict) -> dict[str, float | None]:
     }
     return {
         name: mine / native if isinstance(mine, (int, float))
-        and isinstance(native, (int, float)) and native > 0 else None
+        and isinstance(native, (int, float))
+        and math.isfinite(mine) and math.isfinite(native)
+        and mine > 0 and native > 0 else None
         for name, (mine, native) in pairs.items()
     }
 
@@ -62,7 +65,7 @@ def report(detail: dict) -> bool:
         print("  " + "  ".join(columns))
         if shape.get("caseMessage"):
             print(f"    {shape['caseMessage']}")
-        if status in ("failed", "error", "timed_out"):
+        if status not in ("passed", "succeeded"):
             passed = False
 
     for label, value in (
@@ -96,7 +99,8 @@ def _engine_revision(engine_dir: Path) -> dict:
 
 
 def save_run(detail: dict, submission_id: str, mode: str,
-             engine_dir: Path = ENGINE_DIR, history_dir: Path = HISTORY_DIR) -> Path:
+             local_checkout_at_start: dict,
+             history_dir: Path = HISTORY_DIR) -> Path:
     """Persist full API detail and append a compact experiment index."""
     history_dir.mkdir(parents=True, exist_ok=True)
     run_id = str(detail["id"])
@@ -110,7 +114,8 @@ def save_run(detail: dict, submission_id: str, mode: str,
         "state": detail.get("state"),
         "scoreTokensPerSecond": (detail.get("result") or {}).get("score"),
         "detailFile": full_path.name,
-        **_engine_revision(engine_dir),
+        "localCheckoutAtRunStart": local_checkout_at_start,
+        "submissionSourceVerified": False,
     }
     with (history_dir / "history.jsonl").open("a") as stream:
         stream.write(json.dumps(entry, sort_keys=True) + "\n")
@@ -128,7 +133,7 @@ def attempt(client: Dryft, submission_id: str, mode: str, timeout: float,
     run_id = started["id"]
     print(f"submission {submission_id}, {mode} run {run_id}; waiting")
     detail = client.wait(run_id, timeout=timeout)
-    path = save_run(detail, submission_id, mode, engine_dir, history_dir)
+    path = save_run(detail, submission_id, mode, revision, history_dir)
     print(f"saved {path}")
     return report(detail)
 
