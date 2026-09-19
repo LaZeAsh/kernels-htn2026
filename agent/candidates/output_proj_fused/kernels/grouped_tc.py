@@ -95,7 +95,7 @@ def grouped_tc_decode(query: torch.Tensor, keys: torch.Tensor,
     if not 1 <= prompt_length <= capacity:
         raise ValueError("invalid prompt length")
     block_n = 64
-    target = triton.cdiv(512, batch * 8)
+    target = triton.cdiv(128, batch * 8)
     splits = max(1, min(target, triton.cdiv(prompt_length, block_n)))
     span = triton.cdiv(prompt_length, splits)
     last_span = capacity - (splits - 1) * span

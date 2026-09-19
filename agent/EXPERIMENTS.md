@@ -491,3 +491,36 @@ the rejected candidate. Its correctness and speed are unmeasured; the second
 PV dot costs work. `combined_tc_residual` remains staged as the next isolation
 candidate if this fix fails, with no prefill fusion. The independent
 `autotuned_mlp_linear` stage on passing grouped GQA V7 is also unmeasured.
+
+## Precise PV queued
+
+The precise PV candidate was accepted from actual source commit
+`30026bd98b01fbef288b9f050742003e76716d5c` as submission
+`f18285a6-f5e7-48ea-8e24-5aa59658976d`, official run
+`4d4bd460-6fe8-4f7b-bff2-a2d4833cdee4`. It was queued when recorded;
+no correctness or score is attributed yet. MLP split began measuring at
+20:58:56.905 UTC. Live engine source is unchanged.
+
+## Precise PV passed; MLP split failed; more GQA splits live
+
+The precise PV candidate passed official run
+`4d4bd460-6fe8-4f7b-bff2-a2d4833cdee4` at actual source commit
+`30026bd98b01fbef288b9f050742003e76716d5c`, scoring 720.684275
+tokens/s. The result supports the hypothesis that the two-term BF16
+probability PV calculation improves numerical agreement for the hidden
+workloads; it does not establish which arithmetic difference caused the
+earlier failure. It remains below the QKV split best of 745.470297 tokens/s.
+The full official report is saved under `agent/runs/`.
+
+MLP split failed official run `51f47141-bdad-4c85-8666-a72590bc6a64` with
+`incorrect_output` on a hidden workload. All three public workloads passed.
+Its source commit was `efa8cea5061e84154011b5ee2f796c35ab130560`;
+retain the report and reject promotion or unchanged retry.
+
+The live engine is now `gqa_more_splits` based on passing QKV split. Source
+comparison shows exactly one line changes: the deterministic grouped GQA
+split target rises from 128 to 512. This tests additional decode parallelism
+using the same full-context formula with a changed reduction partition and
+order. QKV projections and prefill remain unchanged. The
+`output_proj_fused` stage is separately registered as unmeasured on the QKV
+baseline. `combined_tc_residual` remains archived as a later isolation stage.

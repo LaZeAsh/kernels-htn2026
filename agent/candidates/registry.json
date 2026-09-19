@@ -105,10 +105,21 @@
     },
     {
       "id": "v16_combined_precise_pv",
+      "path": "agent/candidates/combined_precise_pv",
+      "disposition": "passed",
+      "reason": "Targeted fix of rejected v11: two BF16 probability terms in PV dot; all other source identical. Tests rounding hypothesis.",
+      "numericalRisk": "Official hidden correctness passed with two PV tensor-core dots; causal rounding hypothesis remains unproven.",
+      "commitSha": "30026bd98b01fbef288b9f050742003e76716d5c",
+      "runId": "4d4bd460-6fe8-4f7b-bff2-a2d4833cdee4",
+      "submissionId": "f18285a6-f5e7-48ea-8e24-5aa59658976d",
+      "ranked": true,
+      "scoreTokensPerSecond": 720.6842750634825
+    },
+    {
+      "id": "v18_gqa_more_splits",
       "path": "engine",
       "disposition": "active",
-      "reason": "Targeted fix of rejected v11: two BF16 probability terms in PV dot; all other source identical. Tests rounding hypothesis.",
-      "numericalRisk": "unmeasured hidden correctness and speed; two PV tensor-core dots"
+      "reason": "One-line grouped GQA split target change from 128 to 512 on passing QKV baseline; tests parallelism without other source changes."
     },
     {
       "id": "v10_combined_tc_residual",
@@ -142,11 +153,15 @@
     {
       "id": "v13_mlp_split_fused",
       "path": "agent/candidates/mlp_split_fused",
-      "disposition": "queued",
+      "disposition": "rejected",
       "numericalRisk": "higher: custom decode gate/up GEMM tiling and BF16 reduction order; based on passed v7 grouped TC, native prefill",
       "commitSha": "efa8cea5061e84154011b5ee2f796c35ab130560",
       "runId": "51f47141-bdad-4c85-8666-a72590bc6a64",
-      "submissionId": "1413e9db-7f80-4e8d-b3f7-dbf50eb2bccc"
+      "submissionId": "1413e9db-7f80-4e8d-b3f7-dbf50eb2bccc",
+      "resultStatus": "failed",
+      "failureCode": "incorrect_output",
+      "ranked": false,
+      "rejectionReason": "Official hidden correctness failure; public workloads passed. Do not promote or retry unchanged."
     },
     {
       "id": "v14_native_gqa_prefill",
@@ -165,6 +180,12 @@
       "path": "agent/candidates/autotuned_mlp_linear",
       "disposition": "unmeasured",
       "reason": "Independent decode MLP linear scheduling experiment based on passed v7 grouped TC."
+    },
+    {
+      "id": "v19_output_proj_fused",
+      "path": "agent/candidates/output_proj_fused",
+      "disposition": "unmeasured",
+      "numericalRisk": "custom decode output projection reduction order; based on passing QKV baseline"
     }
   ]
 }
