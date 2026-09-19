@@ -47,3 +47,57 @@ DRYFT_API=https://htn.dryft.ai python3 agent/loop.py \
   defeefdc-f71b-4718-80f5-e8a94ae43ebb \
   --submission-id f747a3b6-de62-42d1-a176-503f8bfff340
 ```
+
+## Staged V3: packed projections
+
+`agent/candidates/packed/` combines each layer's Q, K, V projection weights
+into one `[6144, 2560]` BF16 parameter and gate/up weights into one
+`[19456, 2560]` BF16 parameter. Original projection modules are deleted after
+packing, so steady-state parameter memory is unchanged. The adapter performs
+one BF16 linear for each pack, splits the BF16 result, then follows pinned
+Transformers 4.51.3 Qwen3 norm, RoPE, cache update, SDPA interface, output
+projection, activation and residual order. The graph and fixed-cache behavior
+is inherited from V2. This is a projection experiment; attention computation
+remains the native SDPA adapter.
+
+Static syntax, diff and package checks pass (four source files, 4,326-byte
+archive). It has no CUDA correctness or speed result. Packing can change GEMM
+reduction order despite preserving BF16 output boundaries, so token validation
+is required before use. The V2 engine remains live pending its run.
+
+## Staged V4: direct decode GQA
+
+`agent/candidates/gqa/` inherits V3's packed projections and fixed cache. Its
+single-token decode attention reads K/V directly as `[B,8,C,128]` and maps
+query head `h` to KV head `h//4`. It masks all cache slots after the device
+position, uses FP32 score and online-softmax accumulation, and stores BF16
+output. Prefill still uses native causal SDPA. Batches of at least four use
+one program per query head; batch one at capacity at least 1024 uses four
+fixed split-K programs and a stable FP32 combination. Split choice depends
+only on shape, so capture addresses and timing paths are prompt independent.
+
+Wrapper checks BF16/CUDA shapes and cache contiguity. Static syntax/diff/package
+checks pass (five source files, 5,686-byte archive). No Triton compilation,
+CUDA run, performance or teacher-forced numerical check has been performed
+locally. The kernel changes SDPA reduction order and softmax implementation;
+this remains a candidate until an official correctness result is obtained.
+
+## V2 run in progress
+
+The CUDA graph candidate was pushed as commit `d664f2a`, creating submission
+`57acbad3-afe6-4091-bdfc-d8e4e4ba9516`. Official run
+`1e88deb4-e94c-4e51-b029-ec8aa04561ee` succeeded: 346.677 tokens/s and rank 39, versus V1 at 216.94 tokens/s.
+Public-shaped TPOT was 7.425, 15.365, and 16.332 ms; TTFT was 28.689,
+163.121, and 151.36 ms (native ratios 1.03, 0.80, 0.79). All tokens passed.
+The report records source commit `d664f2a35dea36a86a13a529b81b393e3941a7a2`. The explicit
+candidate registry is `agent/candidates/registry.json`; `plan_next_edit` reads
+terminal run details and proposes the next staged experiment only after this
+run finishes. Infrastructure errors call for retry, wrong tokens call for
+rollback, and latency or memory failures call for review. It keeps the best
+ranked official score using the run's own `commitSha`.
+
+## V3 promotion
+
+After V2 passed, the packed-projection candidate was copied to `engine/` for
+its own official run. The V2 graph source remains at
+`agent/candidates/graphed/`. V4 direct GQA remains staged and unmeasured.

@@ -105,22 +105,14 @@ class Engine:
             len(self.model.model.layers), batch, heads,
             prompt_length + output_length, head_dim,
         )
-        self._indices = torch.arange(
-            prompt_length + output_length, device="cuda:0", dtype=torch.int64
-        )
         self._input = torch.empty((batch, 1), device="cuda:0", dtype=torch.int64)
         self._position = torch.empty((1,), device="cuda:0", dtype=torch.int64)
         self._graph_shape = shape
         self._graph = None
 
     def _decode(self):
-        mask = torch.zeros_like(self._indices, dtype=torch.bfloat16)
-        mask = mask.masked_fill(
-            self._indices > self._position, torch.finfo(torch.bfloat16).min
-        )
-        mask = mask.view(1, 1, 1, -1)
         return _forward_last(
-            self.model, self._input, self._cache, self._position, mask
+            self.model, self._input, self._cache, self._position, None
         )
 
     def _capture(self, token, position):

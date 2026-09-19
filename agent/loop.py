@@ -14,6 +14,7 @@ from package import package
 LATENCY_GATE = 1.10
 ENGINE_DIR = Path(__file__).resolve().parent.parent / "engine"
 HISTORY_DIR = Path(__file__).resolve().parent / "runs"
+REGISTRY_FILE = Path(__file__).resolve().parent / "candidates" / "registry.json"
 
 
 def _latency_ratios(shape: dict) -> dict[str, float | None]:
@@ -114,6 +115,8 @@ def save_run(detail: dict, submission_id: str, mode: str,
         "mode": mode,
         "state": detail.get("state"),
         "scoreTokensPerSecond": (detail.get("result") or {}).get("score"),
+        "commitSha": detail.get("commitSha"),
+        "ranked": (detail.get("result") or {}).get("ranked"),
         "detailFile": full_path.name,
         "localCheckoutSnapshot": local_checkout_snapshot,
         "submissionSourceVerified": False,
@@ -139,8 +142,58 @@ def attempt(client: Dryft, submission_id: str, mode: str, timeout: float,
     return report(detail)
 
 
+def _run_details(history: list[dict]) -> list[dict]:
+    if not history and HISTORY_DIR.exists():
+        history = [json.loads(path.read_text())
+                   for path in HISTORY_DIR.glob("*.json")]
+    details = []
+    for entry in history:
+        if "result" in entry:
+            details.append(entry)
+        elif entry.get("detailFile"):
+            path = HISTORY_DIR / entry["detailFile"]
+            if path.exists():
+                details.append(json.loads(path.read_text()))
+    return details
+
+
 def plan_next_edit(history: list[dict]) -> str:
-    raise NotImplementedError("this is the part you write")
+    """Suggest one decision from measured runs; never submit or edit source."""
+    candidates = json.loads(REGISTRY_FILE.read_text())["candidates"]
+    details = _run_details(history)
+    by_id = {str(detail.get("id")): detail for detail in details}
+    terminal = {"succeeded", "failed", "timed_out", "canceled", "infra_error"}
+    ranked = [detail for detail in details
+              if detail.get("state") == "succeeded"
+              and detail.get("commitSha")
+              and (detail.get("result") or {}).get("ranked") is True
+              and isinstance((detail.get("result") or {}).get("score"), (int, float))
+              and math.isfinite((detail.get("result") or {})["score"])
+              and (detail.get("result") or {})["score"] > 0]
+    best = max(ranked, key=lambda d: d["result"]["score"], default=None)
+    best_label = (f"best ranked {best['result']['score']:.2f} tok/s "
+                  f"at {best['commitSha'][:8]}" if best else "no ranked result yet")
+
+    for candidate in candidates:
+        run_id = candidate.get("runId")
+        if not run_id:
+            return f"Stage {candidate['id']} from {candidate['path']}; {best_label}."
+        detail = by_id.get(run_id)
+        if detail is None or detail.get("state") not in terminal:
+            return f"Wait for existing run {run_id} ({candidate['id']}); {best_label}."
+        result = detail.get("result") or {}
+        code = result.get("failureCode") or detail.get("errorCode")
+        if detail.get("state") == "infra_error" or code in {
+            "harness_error", "infrastructure_error", "infra_error"
+        }:
+            return f"Retry infrastructure failure for {candidate['id']} run {run_id}; {best_label}."
+        if code == "incorrect_output":
+            return f"Rollback {candidate['id']} after incorrect output; {best_label}."
+        if code in {"latency_limit", "unstable_timing", "memory_limit", "timeout"}:
+            return f"Review {candidate['id']} {code} before another experiment; {best_label}."
+        if detail.get("state") != "succeeded" or result.get("ranked") is not True:
+            return f"Review {candidate['id']} run {run_id} ({code or detail.get('state')}); {best_label}."
+    return f"All registered candidates measured; {best_label}."
 
 
 def main() -> None:
