@@ -629,3 +629,17 @@ cuBLASLt during decode warmup and CUDA graph capture, restoring the previous
 preference afterward. This is a scheduling experiment for native Linear GEMMs
 in the captured decode step; it may affect more than Q/K/V projections.
 No correctness or speed result is attributed to this stage yet.
+
+## cuBLASLt queued; isolated MLP down projection live
+
+The cuBLASLt graph capture scheduling candidate was accepted at source commit
+`3eab3f69e265bd351f691aa3997a8630183ffd08`, submission
+`9e0fcaf9-2686-47af-9c58-6b3e5d4fe8fa`, official run
+`3c47d87f-2030-4c0e-962c-4c03c01abcd2`. It was queued when recorded;
+no score or correctness is attributed yet.
+
+The live engine is now `output_down_fused`, an independent candidate on the
+passing QKV baseline. Only decode MLP `down_proj` and its residual add use
+the custom split-K projection. Attention `o_proj` remains the native Linear,
+and prefill follows the native layer path. The passing combined precise PV
+plus QKV snapshot remains archived separately at 769.789834 tokens/s.
