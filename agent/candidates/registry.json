@@ -44,12 +44,26 @@
     },
     {
       "id": "v5_fused_native_decode",
+      "path": "agent/candidates/fused_native_decode",
+      "disposition": "passed",
+      "commitSha": "eb125bb4ead50471332abd84398ba9edd1bba22a",
+      "submissionId": "bc5a01ed-9c49-4ed2-bf8f-81a699ec142d",
+      "runId": "65e4885e-140d-48b7-a744-2eb5a59c82a4",
+      "scoreTokensPerSecond": 502.03673901715536
+    },
+    {
+      "id": "v6_residual_fused",
       "path": "engine",
       "disposition": "active"
     },
     {
       "id": "v6_grouped_tc",
       "path": "agent/candidates/grouped_tc",
+      "disposition": "unmeasured"
+    },
+    {
+      "id": "v7_fused_mlp",
+      "path": "agent/candidates/fused_mlp",
       "disposition": "unmeasured"
     }
   ]

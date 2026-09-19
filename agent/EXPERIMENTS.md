@@ -186,3 +186,41 @@ fusion, with separate native projection modules. Static syntax, diff and
 package checks pass (six source files, 6,774 bytes). Triton compilation and
 greedy-token correctness remain unverified until the run. The grouped Tensor
 Core candidate remains staged separately.
+
+## V5 measuring; fused MLP staged
+
+V5 native-projection decode fusion was pushed as commit `eb125bb`, producing
+submission `bc5a01ed-9c49-4ed2-bf8f-81a699ec142d` and official run
+`65e4885e-140d-48b7-a744-2eb5a59c82a4`. It was measuring when recorded.
+
+`agent/candidates/fused_mlp/` stages a separate decode-only MLP experiment on
+top of V5. It keeps separate original gate and up BF16 weight modules and
+computes both projections from each input tile in one Triton program, without
+writing gate/up activations. Two FP32 Tensor Core accumulators round to BF16
+projection outputs, then SiLU rounds to BF16 before multiplication with BF16
+up output; the BF16 product enters native down_proj. It applies only to
+batches up to 16. Prefill and larger-batch paths stay on V5 code. Fixed tiles
+are BM16/BN64/BK64 with four warps and two stages. This changes GEMM
+reduction order and therefore has higher correctness risk than elementwise
+fusion; V3's hidden incorrect output reinforces the need for a remote token
+check without proving this candidate wrong. Syntax, diff and package checks
+pass (seven source files, 7,495 bytes); no CUDA compile or speed data exists.
+
+The separate residual-plus-RMSNorm fusion stage at
+`agent/candidates/residual_fused/` is recorded in the registry as the next
+lower-risk experiment. It is owned by another coding agent; this log does not
+claim to validate it.
+
+## V5 passed; residual fusion promoted
+
+V5 native-projection decode fusion passed official run
+`65e4885e-140d-48b7-a744-2eb5a59c82a4` at commit `eb125bb`, scoring
+502.036739 tokens/s (11.7% above V4's 449.552). This is the best ranked
+result so far. The passing V5 source remains at
+`agent/candidates/fused_native_decode/`.
+
+The residual-plus-RMSNorm fusion candidate was promoted from
+`agent/candidates/residual_fused/` to `engine/` for its own official run. Static
+syntax, diff and package checks pass (seven source files, 7,590-byte archive).
+The staged fused MLP candidate remains unmeasured and has higher numerical
+risk because it changes projection GEMM reduction order.
