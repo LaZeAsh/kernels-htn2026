@@ -512,7 +512,7 @@
     {
       "id": "v46_native_down_column_major",
       "path": "agent/candidates/native_down_column_major",
-      "disposition": "unmeasured",
+      "disposition": "withdrawn",
       "priority": 70,
       "reason": "Untimed down_proj.weight.data transpose-contiguous-transpose layout on passing 841.845837 baseline; logical BF16 values and Parameter identity retained, strides (1,2560).",
       "numericalRisk": "native prefill and decode down GEMM kernel choice/numerics unmeasured; transient layout copy during init"
@@ -593,7 +593,7 @@
     {
       "id": "v52_large_batch_fused_mlp",
       "path": "agent/candidates/large_batch_fused_mlp",
-      "disposition": "unmeasured",
+      "disposition": "withdrawn",
       "priority": 80,
       "reason": "Separate passing BM64 math helper for batches 17..64 on 841.845837 base; B<=16 winner unchanged, B>64 native fallback, no hidden-batch assumption.",
       "numericalRisk": "~19.9 MB partials at B64 plus warm compiler diagnostics; hidden correctness/speed and memory unmeasured"
@@ -637,19 +637,46 @@
     },
     {
       "id": "v56_prefill_add_norm_b1_gemv",
-      "path": "engine",
-      "disposition": "active",
+      "path": "agent/candidates/prefill_add_norm_b1_gemv",
+      "disposition": "queued",
       "priority": 20,
       "reason": "Reviewed prefill forward add_norm fusion on passing B1 GEMV source; flattened rows use proven add_norm and full prompt MLP remains.",
-      "numericalRisk": "official hidden correctness, TTFT and score unmeasured"
+      "numericalRisk": "official hidden correctness, TTFT and score unmeasured",
+      "commitSha": "55f1d80086f31550ccc2c52d620d94d5fa0180aa",
+      "submissionId": "fddcdf20-36ce-4112-90f3-e8d75e83ed50",
+      "runId": "0c0af175-667e-4f46-9ca0-e45ec1f86b18"
     },
     {
       "id": "v57_b1_down_gemv_residual",
-      "path": "agent/candidates/b1_down_gemv_residual",
-      "disposition": "unmeasured",
+      "path": "engine",
+      "disposition": "active",
       "priority": 30,
       "reason": "B1-only down GEMV plus residual on passing 854.042926 B1 GEMV baseline; five K2048 chunks cover 9728, BF16 projection/residual boundary preserved, no split-K partial allocation.",
       "numericalRisk": "six ROWS1/2/4 by warps4/8 configs; GPU correctness and performance unmeasured"
+    },
+    {
+      "id": "v60_b2_4_fused_mlp_gemv",
+      "path": "agent/candidates/b2_4_fused_mlp_gemv",
+      "disposition": "unmeasured",
+      "priority": 35,
+      "reason": "Reviewed B2..4 fused MLP GEMV on passing 854.042926 B1 GEMV source; static unrolled batch reductions, ROWS1/2 by warps4/8, BF16 boundaries retained.",
+      "numericalRisk": "No local Triton compile or GPU run; hidden correctness and performance unmeasured"
+    },
+    {
+      "id": "v58_native_down_column_major_b1_gemv",
+      "path": "agent/candidates/native_down_column_major_b1_gemv",
+      "disposition": "unmeasured",
+      "priority": 40,
+      "reason": "Reviewed native down weight relayout rebased onto passing 854.042926 B1 GEMV source; logical BF16 values and Parameter identity preserved.",
+      "numericalRisk": "native prefill and decode down GEMM selection, hidden correctness and timing unmeasured; transient init copy"
+    },
+    {
+      "id": "v59_large_batch_fused_mlp_b1_gemv",
+      "path": "agent/candidates/large_batch_fused_mlp_b1_gemv",
+      "disposition": "unmeasured",
+      "priority": 50,
+      "reason": "Reviewed B17..64 fused MLP path rebased onto passing 854.042926 B1 GEMV source; B1 winning path preserved, B>64 native fallback.",
+      "numericalRisk": "GPU correctness, score and memory unmeasured; B64 partials about 19.9 MB and warm compiler diagnostics"
     }
   ]
 }

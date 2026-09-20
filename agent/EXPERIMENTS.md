@@ -1397,3 +1397,20 @@ passing 854.042926 B1 GEMV baseline. Its prefill forward uses flattened
 rows and the proven `add_norm` kernel around full prompt MLP work. Decode
 source is unchanged. Official hidden correctness, TTFT and speed remain
 unmeasured. `b1_down_gemv_residual` is staged separately at priority 30.
+
+The reviewed 854.042926 B1 GEMV rebases `native_down_column_major_b1_gemv`
+and `large_batch_fused_mlp_b1_gemv` are staged at priorities 40 and 50.
+Their older 841.845837 baseline variants were never submitted and are
+withdrawn. The native down relayout retains logical BF16 weights and changes
+GEMM layout; the large batch stage changes only B17..64 MLP execution.
+Neither has GPU correctness or speed data yet.
+
+Prefill add-norm was accepted from commit
+`55f1d80086f31550ccc2c52d620d94d5fa0180aa` as submission
+`fddcdf20-36ce-4112-90f3-e8d75e83ed50`, run
+`0c0af175-667e-4f46-9ca0-e45ec1f86b18`, queued when recorded.
+The reviewed `b1_down_gemv_residual` candidate is now live for the next
+isolated official test. Compile and package checks passed (12 source files,
+11,142 archive bytes); GPU correctness and performance remain unmeasured.
+The reviewed `b2_4_fused_mlp_gemv` stage is registered next at priority 35,
+with no local Triton compile or official result.
