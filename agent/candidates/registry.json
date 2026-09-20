@@ -646,13 +646,17 @@
     {
       "id": "v56_prefill_add_norm_b1_gemv",
       "path": "agent/candidates/prefill_add_norm_b1_gemv",
-      "disposition": "queued",
+      "disposition": "rejected",
       "priority": 20,
       "reason": "Reviewed prefill forward add_norm fusion on passing B1 GEMV source; flattened rows use proven add_norm and full prompt MLP remains.",
       "numericalRisk": "official hidden correctness, TTFT and score unmeasured",
       "commitSha": "55f1d80086f31550ccc2c52d620d94d5fa0180aa",
       "submissionId": "fddcdf20-36ce-4112-90f3-e8d75e83ed50",
-      "runId": "0c0af175-667e-4f46-9ca0-e45ec1f86b18"
+      "runId": "0c0af175-667e-4f46-9ca0-e45ec1f86b18",
+      "resultStatus": "passed",
+      "ranked": true,
+      "scoreTokensPerSecond": 830.3164694511077,
+      "rejectionReason": "Correctness passed but score below 854.042926 B1 GEMV baseline; public-0 TTFT regressed."
     },
     {
       "id": "v57_b1_down_gemv_residual",
@@ -694,16 +698,19 @@
     },
     {
       "id": "v61_flash_varlen_decode_b1_gemv",
-      "path": "engine",
-      "disposition": "active",
+      "path": "agent/candidates/flash_varlen_decode_b1_gemv",
+      "disposition": "queued",
       "priority": 36,
       "reason": "Reviewed Flash varlen decode on passing 854.042926 B1 GEMV baseline; time-major KV uses a single cache without a second copy.",
-      "numericalRisk": "GPU hidden correctness, TTFT, TPOT, memory and score unmeasured"
+      "numericalRisk": "GPU hidden correctness, TTFT, TPOT, memory and score unmeasured",
+      "commitSha": "8430739b9773c52b4a1b369c36f484a38fff09bb",
+      "submissionId": "22399106-1553-49d3-975d-979bc106817f",
+      "runId": "35dcf515-a704-4731-ad28-67756b678b43"
     },
     {
       "id": "v62_prefill_packed_gate_up_b1_gemv",
-      "path": "agent/candidates/prefill_packed_gate_up_b1_gemv",
-      "disposition": "unmeasured",
+      "path": "engine",
+      "disposition": "active",
       "priority": 37,
       "reason": "Reviewed prefill packed gate/up projection on passing 854.042926 B1 GEMV source; one packed weight storage per layer and BF16 cast boundaries retained.",
       "numericalRisk": "GPU hidden correctness and performance unmeasured; changed GEMM scheduling and weight storage"
@@ -715,6 +722,14 @@
       "priority": 38,
       "reason": "Reviewed last-query prefill on correct 848.162169 last-token MLP prefill parent; SDPA output reshape corrected, attention still fills KV for all prompt positions.",
       "numericalRisk": "GPU hidden correctness and TTFT unmeasured after SDPA reshape fix"
+    },
+    {
+      "id": "v64_fused_prefill_mlp_b1_gemv",
+      "path": "agent/candidates/fused_prefill_mlp_b1_gemv",
+      "disposition": "unmeasured",
+      "priority": 39,
+      "reason": "Reviewed prefill-only fused gate/up GEMM and SwiGLU on passing 854.042926 B1 GEMV source for M>=64; native down projection retained.",
+      "numericalRisk": "BM64 BN64 BK64/128 dual FP32 accumulators with BF16 projection, SiLU and product boundaries; GPU hidden correctness, TTFT and memory unmeasured"
     }
   ]
 }

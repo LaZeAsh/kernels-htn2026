@@ -1449,3 +1449,27 @@ source comparison and packaging passed (11 imported files, 9,935 archive
 bytes); GPU correctness and timing are unknown. The reviewed
 `prefill_packed_gate_up_b1_gemv` and corrected `last_query_prefill_b1_gemv`
 remain staged at priorities 37 and 38.
+
+Flash varlen decode was accepted from actual commit
+`8430739b9773c52b4a1b369c36f484a38fff09bb` as submission
+`22399106-1553-49d3-975d-979bc106817f`, run
+`35dcf515-a704-4731-ad28-67756b678b43`, queued when recorded.
+The add-norm run is measuring; down GEMV and B2..4 GEMV remain queued.
+
+The root-reviewed `fused_prefill_mlp_b1_gemv` is staged at priority 39.
+For prefill M>=64, its dual-accumulator GEMM computes gate/up with BF16
+projection, SiLU and product boundaries before native down projection.
+It avoids gate/up intermediate traffic; hidden GPU correctness, TTFT and
+memory are unmeasured. No live promotion was made.
+
+Prefill add-norm run `0c0af175-667e-4f46-9ca0-e45ec1f86b18` passed
+correctness and ranked 830.3164694511077 tok/s, below the 854.042926
+B1 GEMV baseline. Public-0 TTFT rose from 17.836 ms to 29.296 ms,
+while public-1/2 were slightly lower. It is rejected for promotion;
+report saved in `agent/runs/0c0af175-667e-4f46-9ca0-e45ec1f86b18.json`.
+
+The reviewed `prefill_packed_gate_up_b1_gemv` candidate is now live for
+an isolated official test. Static compile, staged source comparison and
+packaging passed (12 imported source files, 11,077 archive bytes). It
+keeps one packed gate/up storage per layer; GPU hidden correctness and
+performance are unmeasured.
