@@ -661,13 +661,17 @@
     {
       "id": "v57_b1_down_gemv_residual",
       "path": "agent/candidates/b1_down_gemv_residual",
-      "disposition": "queued",
+      "disposition": "rejected",
       "priority": 30,
       "reason": "B1-only down GEMV plus residual on passing 854.042926 B1 GEMV baseline; five K2048 chunks cover 9728, BF16 projection/residual boundary preserved, no split-K partial allocation.",
       "numericalRisk": "six ROWS1/2/4 by warps4/8 configs; GPU correctness and performance unmeasured",
       "commitSha": "46150c4526c98e139fc8d0d131a2d4b47a37c262",
       "submissionId": "bea581ee-c895-40b5-ad8a-b20c65f28eab",
-      "runId": "95ef921d-a16d-4f0a-bf37-741b6b47eabb"
+      "runId": "95ef921d-a16d-4f0a-bf37-741b6b47eabb",
+      "resultStatus": "passed",
+      "ranked": true,
+      "scoreTokensPerSecond": 810.9293831459793,
+      "rejectionReason": "Correctness passed but score below 854.042926 B1 GEMV baseline."
     },
     {
       "id": "v60_b2_4_fused_mlp_gemv",
@@ -709,11 +713,14 @@
     },
     {
       "id": "v62_prefill_packed_gate_up_b1_gemv",
-      "path": "engine",
-      "disposition": "active",
+      "path": "agent/candidates/prefill_packed_gate_up_b1_gemv",
+      "disposition": "queued",
       "priority": 37,
       "reason": "Reviewed prefill packed gate/up projection on passing 854.042926 B1 GEMV source; one packed weight storage per layer and BF16 cast boundaries retained.",
-      "numericalRisk": "GPU hidden correctness and performance unmeasured; changed GEMM scheduling and weight storage"
+      "numericalRisk": "GPU hidden correctness and performance unmeasured; changed GEMM scheduling and weight storage",
+      "commitSha": "7be625ef35b5b4da63838761566964d0ac5e88ae",
+      "submissionId": "d2c46df3-d415-41c4-90b6-714c6299da81",
+      "runId": "facd664d-37f2-4f96-8cce-56073e8309b1"
     },
     {
       "id": "v63_last_query_prefill_b1_gemv",
@@ -725,8 +732,8 @@
     },
     {
       "id": "v64_fused_prefill_mlp_b1_gemv",
-      "path": "agent/candidates/fused_prefill_mlp_b1_gemv",
-      "disposition": "unmeasured",
+      "path": "engine",
+      "disposition": "active",
       "priority": 39,
       "reason": "Reviewed prefill-only fused gate/up GEMM and SwiGLU on passing 854.042926 B1 GEMV source for M>=64; native down projection retained.",
       "numericalRisk": "BM64 BN64 BK64/128 dual FP32 accumulators with BF16 projection, SiLU and product boundaries; GPU hidden correctness, TTFT and memory unmeasured"

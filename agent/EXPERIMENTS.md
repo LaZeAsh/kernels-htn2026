@@ -1473,3 +1473,16 @@ an isolated official test. Static compile, staged source comparison and
 packaging passed (12 imported source files, 11,077 archive bytes). It
 keeps one packed gate/up storage per layer; GPU hidden correctness and
 performance are unmeasured.
+
+Down GEMV run `95ef921d-a16d-4f0a-bf37-741b6b47eabb` passed
+correctness and ranked 810.9293831459793 tok/s, below the 854.042926
+B1 GEMV baseline; rejected for promotion. Report saved in
+`agent/runs/95ef921d-a16d-4f0a-bf37-741b6b47eabb.json`.
+
+Packed prefill was accepted from actual commit
+`7be625ef35b5b4da63838761566964d0ac5e88ae` as submission
+`d2c46df3-d415-41c4-90b6-714c6299da81`, run
+`facd664d-37f2-4f96-8cce-56073e8309b1`, queued when recorded.
+The reviewed fused prefill MLP stage is now live for a separate official
+test. Static compile, source comparison and packaging passed (12 imported
+files, 10,988 archive bytes); GPU correctness, TTFT and memory are unknown.
