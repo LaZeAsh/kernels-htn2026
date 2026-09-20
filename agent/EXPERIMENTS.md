@@ -1321,3 +1321,33 @@ synchronized steps. B>4 follows the ordinary passing 841.845837 path.
 Root and Luna's source review found no blocker, and 480 CPU oracle cases
 passed. GPU correctness, cache behavior and timing remain unmeasured.
 Prompt lookup remains an independent queued submission.
+
+## Batch-one fused GEMV sets new best
+
+B1 fused MLP GEMV passed official run
+`dbccd645-6ea3-4c62-af0a-f5a8e6505629` at source commit
+`a4ed38eb83474e08e104dc45300ae9c18f7dd960`, scoring 854.042926
+tokens/s, 1.45% above the previous 841.845837 best. Public TPOT improved
+from 4.227/5.043/5.168 ms to 4.010/4.979/5.084 ms. Public TTFT was
+slower, but all official gates passed. The full report is saved. This is the
+new best validated engine, archived at `agent/candidates/b1_fused_mlp_gemv`;
+the live batched window4 candidate remains a separate pending experiment.
+Official logs withheld the submission's compiler diagnostic stdout, so no
+PTX instruction choice is asserted.
+
+## Batched window and prompt lookup passed but slower; prefill Lt live
+
+The batched window4 fused candidate passed official run
+`de88706b-3bc7-447d-b5f5-8061ba9e627a` at source commit
+`ca55d9a88f487a55f984824012ffcab0d5c0e26e`, scoring 788.143873
+tokens/s. Prompt lookup passed run `fbfb71ee-ed47-4a4c-9186-01f3130a2282`
+at commit `2774eb0f8ed6311e98c4250493aea70f678662d3`, scoring 823.650649.
+Both passed correctness but score below the 854.042926 B1 GEMV best, so
+neither is promoted. Their full reports are saved.
+
+The live engine is now `prefill_cublaslt_b1_gemv`, a one-line initialization
+preference for cuBLASLt on the passing B1 GEMV source. This can alter native
+prefill GEMM selection as well as decode scheduling; official correctness,
+TTFT and speed remain unmeasured. The separately reviewed
+`last_token_mlp_prefill_b1_gemv` is staged for an isolated experiment after
+this candidate is submitted, with no GPU result yet.

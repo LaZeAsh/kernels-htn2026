@@ -125,7 +125,6 @@ class Engine:
             layer.self_attn.q_norm = FusedRMSNorm(layer.self_attn.q_norm)
             layer.self_attn.k_norm = FusedRMSNorm(layer.self_attn.k_norm)
             install_direct_gqa(layer)
-        torch.backends.cuda.preferred_blas_library("cublaslt")
         self._graph_shape = None
         self._cache = None
         self._graph = None

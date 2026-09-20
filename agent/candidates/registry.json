@@ -565,24 +565,30 @@
     {
       "id": "v50_window4_prompt_lookup",
       "path": "agent/candidates/window4_prompt_lookup",
-      "disposition": "queued",
+      "disposition": "rejected",
       "priority": 46,
       "reason": "CPU 3/4-context lookup proposes three known following tokens on unmeasured window4_fused_mlp; reset per prompt and update history, full-model acceptance/cache unchanged.",
       "numericalRisk": "depends on unmeasured window4_fused_mlp; GPU correctness, acceptance gain and timing unknown; wait fused window result",
       "commitSha": "2774eb0f8ed6311e98c4250493aea70f678662d3",
       "submissionId": "9bdfac10-9df8-40eb-81c6-0d367780c92b",
-      "runId": "fbfb71ee-ed47-4a4c-9186-01f3130a2282"
+      "runId": "fbfb71ee-ed47-4a4c-9186-01f3130a2282",
+      "resultStatus": "passed",
+      "ranked": true,
+      "scoreTokensPerSecond": 823.650648874344,
+      "rejectionReason": "Correctness passed but score below 854.042926 B1 GEMV best; no promotion."
     },
     {
       "id": "v51_b1_fused_mlp_gemv",
       "path": "agent/candidates/b1_fused_mlp_gemv",
-      "disposition": "measuring",
+      "disposition": "passed",
       "priority": 75,
       "reason": "B1-only fused gate/up GEMV on passing 841.845837 baseline: original BF16 weights, full K2560 padded 4096, FP32 multiply/sum, BF16 projection/SiLU/product boundaries; B>1 winning MLP unchanged.",
-      "numericalRisk": "high CTA/register demand, reduction-order numerics and six-config autotune warmup unmeasured on GPU",
+      "numericalRisk": "Official hidden correctness passed; compiler instruction details withheld from submission logs.",
       "commitSha": "a4ed38eb83474e08e104dc45300ae9c18f7dd960",
       "submissionId": "4d27e436-fc10-4d67-befc-ae8e5f94be1c",
-      "runId": "dbccd645-6ea3-4c62-af0a-f5a8e6505629"
+      "runId": "dbccd645-6ea3-4c62-af0a-f5a8e6505629",
+      "ranked": true,
+      "scoreTokensPerSecond": 854.0429258313983
     },
     {
       "id": "v52_large_batch_fused_mlp",
@@ -594,11 +600,34 @@
     },
     {
       "id": "v53_batched_window4_fused",
-      "path": "engine",
-      "disposition": "active",
+      "path": "agent/candidates/batched_window4_fused",
+      "disposition": "rejected",
       "priority": 25,
       "reason": "B1..4 independent position/cache/queue speculative window4 on correct but slower 799.328190 fused window base; flat MLP rows B*4<=16, B>4 passes ordinary 841.845837 path.",
-      "numericalRisk": "480 CPU oracle cases and static source review only; official hidden correctness/timing unmeasured"
+      "numericalRisk": "480 CPU oracle cases and static source review only; official hidden correctness/timing unmeasured",
+      "resultStatus": "passed",
+      "ranked": true,
+      "scoreTokensPerSecond": 788.1438731421749,
+      "commitSha": "ca55d9a88f487a55f984824012ffcab0d5c0e26e",
+      "submissionId": "a853170c-633f-4114-aacf-a31cc6a67b58",
+      "runId": "de88706b-3bc7-447d-b5f5-8061ba9e627a",
+      "rejectionReason": "Correctness passed but score below 854.042926 B1 GEMV best; no promotion."
+    },
+    {
+      "id": "v54_prefill_cublaslt_b1_gemv",
+      "path": "engine",
+      "disposition": "active",
+      "priority": 10,
+      "reason": "One-line preferred cuBLASLt setting in initialization on passing 854.042926 B1 GEMV source; affects native prefill and decode BLAS scheduling.",
+      "numericalRisk": "hidden correctness, TTFT and score unmeasured for changed native prefill GEMMs"
+    },
+    {
+      "id": "v55_last_token_mlp_prefill_b1_gemv",
+      "path": "agent/candidates/last_token_mlp_prefill_b1_gemv",
+      "disposition": "unmeasured",
+      "priority": 15,
+      "reason": "Reviewed isolated last-token MLP prefill stage on passing B1 GEMV source; ready after v54 submission.",
+      "numericalRisk": "GPU hidden correctness and timing unmeasured"
     }
   ]
 }
