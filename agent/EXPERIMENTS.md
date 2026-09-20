@@ -976,3 +976,50 @@ SwiGLU kernel and changes decode down projection plus norm; the reviewed
 path uses two kernel launches and partial tensor traffic. Its official
 correctness and speed remain unmeasured. The lossless source is archived,
 with its run still queued. The LM head run remains under automatic retry.
+
+The down projection plus norm candidate was accepted at actual source commit
+`9411624768095036c64c9dc6ee0d5d9f45258318`, submission
+`327b8d6e-b145-4484-96b3-28d618c4ca79`, official run
+`427764f7-68c5-4e13-a004-88b429522c7b`. It was queued when recorded;
+no result is attributed yet. LM head attempt two is measuring after an
+automatic harness retry on the same run ID. Live engine source is unchanged.
+
+## LM head run canceled after harness retry
+
+The fused LM head run `c4538097-758c-4a8a-9a7a-0d7ebbf1293f` ended
+`canceled` on attempt two with `harness_error`: the platform terminated it
+after its 15-minute run limit. The saved report has no workload results and
+no ranked score. This is not evidence that the engine passed or failed token
+correctness or latency. No duplicate run was started by the monitor.
+
+## LM head retry from same submission
+
+After the prior LM head run was canceled by the harness, a new official run
+`2addd03d-40d8-499c-b3ab-3ac92b23df91` was accepted for the same
+submission `b2a4cc8a-3eeb-468a-a822-65387947e184` and source commit
+`aa1570211116bd2a3adfdea71316218d59a4cb4c`. The canceled run
+`c4538097-758c-4a8a-9a7a-0d7ebbf1293f` remains in saved history and
+`priorRunIds`. The retry was queued when recorded; no engine result is yet
+attributed. Live engine source is unchanged.
+
+## Lossless MLP correct but much slower
+
+The lossless autotuned MLP candidate passed correctness and ranked in official
+run `bb6abfd7-eebc-4c88-8c0b-75f7125f54db` at source commit
+`20ce66e24444e2eff2df9999d6f2081846b791b3`, scoring 237.268642
+tokens/s. That is 71.82% below its passing 841.845837 baseline. Public
+TPOT was 19.429, 20.453 and 20.425 ms versus 4.227, 5.043 and 5.168 ms.
+The candidate is rejected for promotion on performance, while its successful
+correctness result and full report remain recorded. The live engine is
+unchanged; down projection plus norm and the LM retry remain queued.
+
+## Expanded MLP autotune live
+
+The live engine is now exactly the reviewed `expanded_mlp_autotune` stage on
+the passing 841.845837 baseline. Only the MLP Triton autotune config list
+changes from four to eight choices. Compilation and warmup cost, correctness
+and speed remain unmeasured on GPU. The older `lossless_mlp_precise_qkv`
+stage is withdrawn from scheduling after the separate tested compressed MLP
+path showed severe decode slowdown. The older stage itself has no correctness
+result, and its source remains archived. `agent/client.py` was not edited as
+part of this engine promotion.

@@ -99,10 +99,25 @@ class Dryft:
         never start a second run because the first one was slow to answer.
         """
         deadline = time.monotonic() + timeout
+        last_network_reason = None
         while True:
-            current = self.run(run_id)
-            if current.get("state") in TERMINAL:
-                return current
-            if time.monotonic() >= deadline:
-                raise TimeoutError(f"run {run_id} still {current.get('state')} after {timeout}s")
+            try:
+                current = self.run(run_id)
+            except urllib.error.URLError as error:
+                reason = str(error.reason).replace(self.token, "[redacted]")
+                last_network_reason = reason
+                if time.monotonic() >= deadline:
+                    raise TimeoutError(
+                        f"run {run_id} polling timed out after {timeout}s; "
+                        f"last network error: {reason}"
+                    ) from None
+            else:
+                if current.get("state") in TERMINAL:
+                    return current
+                if time.monotonic() >= deadline:
+                    detail = (f"; last network error: {last_network_reason}"
+                              if last_network_reason else "")
+                    raise TimeoutError(
+                        f"run {run_id} still {current.get('state')} after {timeout}s{detail}"
+                    )
             time.sleep(interval)

@@ -209,13 +209,16 @@
     {
       "id": "v38_fused_lm_head_autotuned_mlp",
       "path": "agent/candidates/fused_lm_head_autotuned_mlp",
-      "disposition": "validating",
+      "disposition": "queued",
       "priority": 5,
-      "reason": "Only fused full-vocabulary LM head helper/import/decode dispatch added to passing 841.845837 autotuned MLP; MLP kernel bytewise unchanged.",
+      "reason": "Official retry of same immutable submission after earlier harness cancellation; prior run preserved.",
       "numericalRisk": "custom full-vocabulary dot/argmax hidden correctness and warmup unmeasured",
       "commitSha": "aa1570211116bd2a3adfdea71316218d59a4cb4c",
       "submissionId": "b2a4cc8a-3eeb-468a-a822-65387947e184",
-      "runId": "c4538097-758c-4a8a-9a7a-0d7ebbf1293f"
+      "runId": "2addd03d-40d8-499c-b3ab-3ac92b23df91",
+      "priorRunIds": [
+        "c4538097-758c-4a8a-9a7a-0d7ebbf1293f"
+      ]
     },
     {
       "id": "v10_combined_tc_residual",
@@ -389,10 +392,11 @@
     {
       "id": "v35_lossless_mlp_precise_qkv",
       "path": "agent/candidates/lossless_mlp_precise_qkv",
-      "disposition": "unmeasured",
+      "disposition": "withdrawn",
       "priority": 80,
       "reason": "Lossless decode MLP kernel staged on passing precise PV plus QKV baseline; Luna static review found no bit or stride blocker.",
-      "numericalRisk": "GPU bit self-test, all-weight validation, official correctness and speed not yet run"
+      "numericalRisk": "GPU bit self-test, all-weight validation, official correctness and speed not yet run",
+      "withdrawalReason": "Deprioritized after separate tested compressed MLP path passed correctness but incurred severe decode slowdown; no correctness conclusion for this unmeasured older stage."
     },
     {
       "id": "v37_fused_lm_head_precise_qkv_cublaslt",
@@ -421,26 +425,33 @@
     {
       "id": "v40_lossless_autotuned_mlp_precise_qkv_cublaslt",
       "path": "agent/candidates/lossless_autotuned_mlp_precise_qkv_cublaslt",
-      "disposition": "queued",
+      "disposition": "rejected",
       "priority": 30,
       "reason": "Lossless MLP codec on passing 841.845837 autotuned MLP precise PV/QKV/cuBLASLt source; K128 divisibility guard, exact per-weight validation of gate/up at BK64/BK128 and all 65536 BF16 bit patterns.",
       "numericalRisk": "GPU correctness, ~2.7 GB persistent memory increase, initialization budget and unpack cost unmeasured",
       "commitSha": "20ce66e24444e2eff2df9999d6f2081846b791b3",
       "submissionId": "a5e76cd5-8f09-49ce-9c92-1fd257680080",
-      "runId": "bb6abfd7-eebc-4c88-8c0b-75f7125f54db"
+      "runId": "bb6abfd7-eebc-4c88-8c0b-75f7125f54db",
+      "resultStatus": "passed",
+      "ranked": true,
+      "scoreTokensPerSecond": 237.2686424100479,
+      "rejectionReason": "Official correctness passed but severe slowdown vs 841.845837 baseline: score -71.82%, public TPOT ~19.4-20.5ms vs 4.2-5.2ms."
     },
     {
       "id": "v41_output_down_norm_autotuned_mlp_cublaslt",
-      "path": "engine",
-      "disposition": "active",
+      "path": "agent/candidates/output_down_norm_autotuned_mlp_cublaslt",
+      "disposition": "queued",
       "priority": 40,
       "reason": "Custom down projection plus norm composed with passing 841.845837 autotuned split SwiGLU/cuBLASLt; winning MLP source preserved.",
-      "numericalRisk": "two kernel launches plus partial tensor traffic; hidden correctness and speed unmeasured"
+      "numericalRisk": "two kernel launches plus partial tensor traffic; hidden correctness and speed unmeasured",
+      "commitSha": "9411624768095036c64c9dc6ee0d5d9f45258318",
+      "submissionId": "327b8d6e-b145-4484-96b3-28d618c4ca79",
+      "runId": "427764f7-68c5-4e13-a004-88b429522c7b"
     },
     {
       "id": "v42_expanded_mlp_autotune",
-      "path": "agent/candidates/expanded_mlp_autotune",
-      "disposition": "unmeasured",
+      "path": "engine",
+      "disposition": "active",
       "priority": 50,
       "reason": "Expand passing 841.845837 MLP autotune from four to eight fixed configurations: add BN128 BK64/128 with warps8 stages2 or warps4 stages3.",
       "numericalRisk": "extra Triton compilation and tuning may exceed load plus warmup budget; GPU correctness/speed unmeasured"
