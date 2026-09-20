@@ -564,16 +564,19 @@
     },
     {
       "id": "v50_window4_prompt_lookup",
-      "path": "engine",
-      "disposition": "active",
+      "path": "agent/candidates/window4_prompt_lookup",
+      "disposition": "queued",
       "priority": 46,
       "reason": "CPU 3/4-context lookup proposes three known following tokens on unmeasured window4_fused_mlp; reset per prompt and update history, full-model acceptance/cache unchanged.",
-      "numericalRisk": "depends on unmeasured window4_fused_mlp; GPU correctness, acceptance gain and timing unknown; wait fused window result"
+      "numericalRisk": "depends on unmeasured window4_fused_mlp; GPU correctness, acceptance gain and timing unknown; wait fused window result",
+      "commitSha": "2774eb0f8ed6311e98c4250493aea70f678662d3",
+      "submissionId": "9bdfac10-9df8-40eb-81c6-0d367780c92b",
+      "runId": "fbfb71ee-ed47-4a4c-9186-01f3130a2282"
     },
     {
       "id": "v51_b1_fused_mlp_gemv",
       "path": "agent/candidates/b1_fused_mlp_gemv",
-      "disposition": "validating",
+      "disposition": "measuring",
       "priority": 75,
       "reason": "B1-only fused gate/up GEMV on passing 841.845837 baseline: original BF16 weights, full K2560 padded 4096, FP32 multiply/sum, BF16 projection/SiLU/product boundaries; B>1 winning MLP unchanged.",
       "numericalRisk": "high CTA/register demand, reduction-order numerics and six-config autotune warmup unmeasured on GPU",
@@ -588,6 +591,14 @@
       "priority": 80,
       "reason": "Separate passing BM64 math helper for batches 17..64 on 841.845837 base; B<=16 winner unchanged, B>64 native fallback, no hidden-batch assumption.",
       "numericalRisk": "~19.9 MB partials at B64 plus warm compiler diagnostics; hidden correctness/speed and memory unmeasured"
+    },
+    {
+      "id": "v53_batched_window4_fused",
+      "path": "engine",
+      "disposition": "active",
+      "priority": 25,
+      "reason": "B1..4 independent position/cache/queue speculative window4 on correct but slower 799.328190 fused window base; flat MLP rows B*4<=16, B>4 passes ordinary 841.845837 path.",
+      "numericalRisk": "480 CPU oracle cases and static source review only; official hidden correctness/timing unmeasured"
     }
   ]
 }

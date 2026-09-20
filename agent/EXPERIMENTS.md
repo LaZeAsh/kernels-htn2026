@@ -1301,3 +1301,23 @@ recorded. The live engine is now `window4_prompt_lookup`, a separate test of
 prompt-local proposals on the correct but slower window4 fused MLP base.
 Its full-model acceptance/cache and all kernels remain unchanged. GPU
 acceptance benefit, correctness and speed remain unmeasured.
+
+The window4 prompt lookup candidate was accepted at actual source commit
+`2774eb0f8ed6311e98c4250493aea70f678662d3`, submission
+`9bdfac10-9df8-40eb-81c6-0d367780c92b`, official run
+`fbfb71ee-ed47-4a4c-9186-01f3130a2282`. It was queued when recorded;
+no correctness, acceptance or speed is attributed yet. B1 GEMV run
+`dbccd645-6ea3-4c62-af0a-f5a8e6505629` is measuring. Live source is
+unchanged.
+
+## Batched window4 live
+
+`batched_window4_fused` is registered unmeasured at priority 25 and is now
+the live engine for a separate official run. It builds on the correct but
+slower 799.328190 window4 fused MLP candidate. Batches one through four
+use independent base positions, cache rows and proposal queues, with flat
+MLP rows B×4≤16; finished rows freeze while the batch yields exactly O
+synchronized steps. B>4 follows the ordinary passing 841.845837 path.
+Root and Luna's source review found no blocker, and 480 CPU oracle cases
+passed. GPU correctness, cache behavior and timing remain unmeasured.
+Prompt lookup remains an independent queued submission.
