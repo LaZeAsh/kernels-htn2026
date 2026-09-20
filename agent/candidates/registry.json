@@ -209,7 +209,7 @@
     {
       "id": "v38_fused_lm_head_autotuned_mlp",
       "path": "agent/candidates/fused_lm_head_autotuned_mlp",
-      "disposition": "queued",
+      "disposition": "rejected",
       "priority": 5,
       "reason": "Official retry of same immutable submission after earlier harness cancellation; prior run preserved.",
       "numericalRisk": "custom full-vocabulary dot/argmax hidden correctness and warmup unmeasured",
@@ -218,7 +218,11 @@
       "runId": "2addd03d-40d8-499c-b3ab-3ac92b23df91",
       "priorRunIds": [
         "c4538097-758c-4a8a-9a7a-0d7ebbf1293f"
-      ]
+      ],
+      "resultStatus": "passed",
+      "ranked": true,
+      "scoreTokensPerSecond": 822.801375258456,
+      "rejectionReason": "Retry passed correctness but score 2.26% below 841.845837 autotuned MLP baseline; all public TPOT slower. Prior canceled run retained."
     },
     {
       "id": "v10_combined_tc_residual",
@@ -488,11 +492,14 @@
     },
     {
       "id": "v45_interleaved_mlp_autotuned",
-      "path": "engine",
-      "disposition": "active",
+      "path": "agent/candidates/interleaved_mlp_autotuned",
+      "disposition": "queued",
       "priority": 30,
       "reason": "Interleaved gate/up MLP on passing 841.845837 autotuned baseline; reviewed exact 19456 physical columns and even/odd reducer BF16 boundaries.",
-      "numericalRisk": "~3.34 GiB extra weight copy and widened MMA resource/initialization costs; hidden correctness and speed unmeasured"
+      "numericalRisk": "~3.34 GiB extra weight copy and widened MMA resource/initialization costs; hidden correctness and speed unmeasured",
+      "commitSha": "98aad80d705e0d430c6925e11727bce214cc33af",
+      "submissionId": "786d67aa-4d6f-4e1a-a0eb-b2447aeb8853",
+      "runId": "429ac48e-7149-4601-9990-35e05b985ba6"
     },
     {
       "id": "v46_native_down_column_major",
@@ -504,11 +511,19 @@
     },
     {
       "id": "v47_wgmma_mlp_bm64",
-      "path": "agent/candidates/wgmma_mlp_bm64",
-      "disposition": "unmeasured",
+      "path": "engine",
+      "disposition": "active",
       "priority": 35,
       "reason": "MLP projection BM16 to BM64 on passing 841.845837 base, retaining B<=16 row mask and split/reducer; may enable WGMMA with eligible pinned Triton v3 shapes.",
       "numericalRisk": "actual PTX path unobserved; padded FLOPs, registers, compile and hidden speed/correctness unmeasured"
+    },
+    {
+      "id": "v48_window4_fused_mlp",
+      "path": "agent/candidates/window4_fused_mlp",
+      "disposition": "unmeasured",
+      "priority": 45,
+      "reason": "Window4 acceptance/cache with passing 841.845837 MLP/residual fusion; batch1 flattens GEMM/norm token rows four while attention/cache retain B1T4; B>1 follows ordinary passing path.",
+      "numericalRisk": "combination hidden numerical correctness and timing unmeasured; prior window4 alone was correct but slower"
     }
   ]
 }

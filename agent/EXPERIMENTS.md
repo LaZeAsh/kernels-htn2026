@@ -1113,3 +1113,41 @@ remain for prefill and larger batches. Extra persistent memory is about
 3.34 GiB; official correctness, memory, initialization budget and speed
 remain unmeasured. The withdrawn expanded autotune, native down layout and
 WGMMA tile stages are not composed into this engine.
+
+The interleaved MLP candidate was accepted at actual source commit
+`98aad80d705e0d430c6925e11727bce214cc33af`, submission
+`786d67aa-4d6f-4e1a-a0eb-b2447aeb8853`, official run
+`429ac48e-7149-4601-9990-35e05b985ba6`. It was queued when recorded;
+no correctness, memory or score is attributed yet. The LM head retry
+`2addd03d-40d8-499c-b3ab-3ac92b23df91` is measuring; the prefill graph
+run remains queued. Live source is unchanged.
+
+`window4_fused_mlp` is registered unmeasured at priority 45. Root and Luna
+reviewed its composition of the previously correct window4 acceptance/cache
+path with the passing 841.845837 MLP and residual fusion. For batch one it
+flattens four token rows only through GEMM and norm while attention/cache
+retain B1T4. The final head covers all four tokens without an extra norm;
+B>1 uses the ordinary passing path. Existing window kernels and acceptance
+are bytewise unchanged. This combination still needs official numerical
+correctness and timing evidence; it is not live.
+
+## LM head retry passed but slower
+
+The LM head retry on the same immutable submission passed official run
+`2addd03d-40d8-499c-b3ab-3ac92b23df91` at source commit
+`aa1570211116bd2a3adfdea71316218d59a4cb4c`, scoring 822.801375
+tokens/s. This is 2.26% below the 841.845837 autotuned MLP baseline.
+Public TPOT was 4.301, 5.113 and 5.239 ms versus baseline 4.227, 5.043
+and 5.168 ms, all slower. Correctness passed, but promotion is rejected for
+performance. The first canceled harness run and this successful retry both
+remain saved. Live interleaved engine source is unchanged.
+
+## BM64 MLP projection live
+
+The live engine is now exactly the reviewed `wgmma_mlp_bm64` stage on the
+passing 841.845837 baseline. Its only source change widens the MLP
+projection row tile and FP32 accumulator from 16 to 64 rows while retaining
+the B≤16 row mask, split and reducer. This may enable Hopper MMA v3 lowering,
+but actual PTX and GPU behavior are unobserved. Padded work, register
+pressure, compilation, correctness and speed still require an official run.
+The expanded and interleaved MLP candidates are not composed into this stage.

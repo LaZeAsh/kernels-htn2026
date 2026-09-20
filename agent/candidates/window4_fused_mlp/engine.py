@@ -1,0 +1,290 @@
+"""Experimental fixed-cache Qwen3 engine with a captured decode step.
+
+Copy this directory's contents to submission root only after public validation.
+"""
+
+import torch
+from transformers import AutoModelForCausalLM
+
+from kernels.rmsnorm import rms_norm
+from kernels.residual_norm import add_norm
+from kernels.mlp_split import split_swiglu
+from attention import install_direct_gqa
+
+
+class FusedRMSNorm(torch.nn.Module):
+    def __init__(self, reference):
+        super().__init__()
+        self.weight = reference.weight
+        self.variance_epsilon = reference.variance_epsilon
+
+    def forward(self, x):
+        return rms_norm(x, self.weight, self.variance_epsilon)
+
+
+class FixedCache:
+    """Layer KV storage. Prefill exposes its prefix; decode exposes capacity.
+
+    The caller supplies an explicit additive mask for decode, so no unfilled
+    slot affects attention. The cache is overwritten from position zero on
+    every generation; no prompt data is reused.
+    """
+
+    def __init__(self, layers, batch, heads, capacity, head_dim):
+        self.capacity = capacity
+        self.keys = [torch.zeros((batch, heads, capacity, head_dim),
+                                 device="cuda:0", dtype=torch.bfloat16)
+                     for _ in range(layers)]
+        self.values = [torch.zeros_like(k) for k in self.keys]
+        self.prefill_length = 0
+        self.prefill_mode = True
+        self.window_mode = False
+
+    def update(self, key_states, value_states, layer_idx, cache_kwargs=None):
+        k, v = self.keys[layer_idx], self.values[layer_idx]
+        length = key_states.shape[-2]
+        if self.prefill_mode:
+            k[:, :, :length, :].copy_(key_states)
+            v[:, :, :length, :].copy_(value_states)
+            if layer_idx == 0:
+                self.prefill_length = length
+            return k[:, :, :length, :], v[:, :, :length, :]
+        position = cache_kwargs["cache_position"].reshape(1)
+        k.index_copy_(2, position, key_states)
+        v.index_copy_(2, position, value_states)
+        return k, v
+
+    def get_seq_length(self, layer_idx=0):
+        return self.prefill_length
+
+
+@torch.inference_mode()
+def _forward_last(model, token_ids, cache, positions, attention_mask):
+    base = model.model
+    hidden = base.embed_tokens(token_ids)
+    position_ids = positions.unsqueeze(0)
+    position_embeddings = base.rotary_emb(hidden, position_ids)
+    for layer in base.layers:
+        hidden = layer(
+            hidden,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            past_key_value=cache,
+            use_cache=True,
+            cache_position=positions,
+            position_embeddings=position_embeddings,
+        )[0]
+    return model.lm_head(base.norm(hidden[:, -1:, :])).argmax(-1)
+
+
+@torch.inference_mode()
+def _decode_last(model, token_ids, cache, positions):
+    """Single-token path carries each layer's residual and normalized input."""
+    base = model.model
+    residual = base.embed_tokens(token_ids)
+    position_ids = positions.unsqueeze(0)
+    position_embeddings = base.rotary_emb(residual, position_ids)
+    normalized = base.layers[0].input_layernorm(residual)
+    layers = base.layers
+    for index, layer in enumerate(layers):
+        attention_output = layer.self_attn(
+            normalized,
+            position_embeddings=position_embeddings,
+            attention_mask=None,
+            past_key_value=cache,
+            cache_position=positions,
+        )[0]
+        after_attention, mlp_input = add_norm(
+            residual, attention_output,
+            layer.post_attention_layernorm.weight,
+            layer.post_attention_layernorm.variance_epsilon,
+        )
+        mlp_output = layer.mlp(mlp_input)
+        if index + 1 < len(layers):
+            next_norm = layers[index + 1].input_layernorm
+        else:
+            next_norm = base.norm
+        residual, normalized = add_norm(
+            after_attention, mlp_output,
+            next_norm.weight, next_norm.variance_epsilon,
+        )
+    return model.lm_head(normalized).argmax(-1)
+
+
+@torch.inference_mode()
+def _window_forward(model, token_ids, cache, positions):
+    """Teacher-force all four proposed tokens with a causal cache mask."""
+    base = model.model
+    hidden = base.embed_tokens(token_ids)
+    position_embeddings = base.rotary_emb(hidden, positions.unsqueeze(0))
+    residual = hidden.reshape(4, 1, 2560)
+    layers = base.layers
+    normalized = layers[0].input_layernorm(residual)
+    for index, layer in enumerate(layers):
+        attention = layer.self_attn(
+            normalized.reshape(1, 4, 2560),
+            position_embeddings=position_embeddings,
+            attention_mask=None, past_key_value=cache,
+            cache_position=positions,
+        )[0].reshape(4, 1, 2560)
+        after_attention, mlp_input = add_norm(
+            residual, attention,
+            layer.post_attention_layernorm.weight,
+            layer.post_attention_layernorm.variance_epsilon,
+        )
+        product = split_swiglu(
+            mlp_input, layer.mlp.gate_proj.weight,
+            layer.mlp.up_proj.weight,
+        )
+        mlp_output = layer.mlp.down_proj(product)
+        next_norm = (layers[index + 1].input_layernorm
+                     if index + 1 < len(layers) else base.norm)
+        residual, normalized = add_norm(
+            after_attention, mlp_output,
+            next_norm.weight, next_norm.variance_epsilon,
+        )
+    return model.lm_head(normalized.reshape(1, 4, 2560)).argmax(-1)
+
+
+class Engine:
+    def __init__(self, model_path: str) -> None:
+        torch.backends.cuda.matmul.allow_tf32 = False
+        torch.backends.cudnn.allow_tf32 = False
+        self.model = (AutoModelForCausalLM.from_pretrained(
+            model_path, torch_dtype=torch.bfloat16,
+            attn_implementation="sdpa", local_files_only=True,
+        ).eval().to("cuda:0"))
+        base = self.model.model
+        base.norm = FusedRMSNorm(base.norm)
+        for layer in base.layers:
+            layer.input_layernorm = FusedRMSNorm(layer.input_layernorm)
+            layer.post_attention_layernorm = FusedRMSNorm(layer.post_attention_layernorm)
+            layer.self_attn.q_norm = FusedRMSNorm(layer.self_attn.q_norm)
+            layer.self_attn.k_norm = FusedRMSNorm(layer.self_attn.k_norm)
+            install_direct_gqa(layer)
+        self._graph_shape = None
+        self._cache = None
+        self._graph = None
+        self._window_graph = None
+
+    def _prepare(self, batch, prompt_length, output_length):
+        shape = (batch, prompt_length, output_length)
+        if shape == self._graph_shape:
+            return
+        config = self.model.config
+        heads = config.num_key_value_heads
+        head_dim = self.model.model.layers[0].self_attn.k_proj.out_features // heads
+        self._cache = FixedCache(
+            len(self.model.model.layers), batch, heads,
+            prompt_length + output_length + (4 if batch == 1 else 0), head_dim,
+        )
+        self._input = torch.empty((batch, 1), device="cuda:0", dtype=torch.int64)
+        self._position = torch.empty((1,), device="cuda:0", dtype=torch.int64)
+        if batch == 1:
+            self._window_input = torch.empty((1, 4), device="cuda:0", dtype=torch.int64)
+            self._window_offsets = torch.arange(4, device="cuda:0", dtype=torch.int64)
+        self._graph_shape = shape
+        self._graph = None
+        self._window_graph = None
+
+    def _decode(self):
+        return _decode_last(self.model, self._input, self._cache, self._position)
+
+    def _window_step(self):
+        positions = self._position + self._window_offsets
+        return _window_forward(self.model, self._window_input, self._cache, positions)
+
+    def _capture_window(self, current, position):
+        previous_blas = torch.backends.cuda.preferred_blas_library()
+        try:
+            torch.backends.cuda.preferred_blas_library("cublaslt")
+            stream = torch.cuda.Stream()
+            stream.wait_stream(torch.cuda.current_stream())
+            with torch.cuda.stream(stream):
+                self._window_input.fill_(int(current))
+                self._position.fill_(position)
+                self._window_step()
+                graph = torch.cuda.CUDAGraph()
+                with torch.cuda.graph(graph):
+                    output = self._window_step()
+            torch.cuda.current_stream().wait_stream(stream)
+        finally:
+            torch.backends.cuda.preferred_blas_library(previous_blas)
+        self._window_graph = graph
+        self._window_graph_output = output
+
+    def _capture(self, token, position):
+        previous_blas = torch.backends.cuda.preferred_blas_library()
+        try:
+            torch.backends.cuda.preferred_blas_library("cublaslt")
+            stream = torch.cuda.Stream()
+            stream.wait_stream(torch.cuda.current_stream())
+            with torch.cuda.stream(stream):
+                self._input.copy_(token)
+                self._position.fill_(position)
+                self._decode()  # warm kernels and allocator on the capture stream
+                graph = torch.cuda.CUDAGraph()
+                with torch.cuda.graph(graph):
+                    output = self._decode()
+            torch.cuda.current_stream().wait_stream(stream)
+        finally:
+            torch.backends.cuda.preferred_blas_library(previous_blas)
+        self._graph = graph
+        self._graph_output = output
+
+    def generate(self, input_ids: list[list[int]], max_new_tokens: int):
+        if max_new_tokens <= 0:
+            return
+        batch, prompt_length = len(input_ids), len(input_ids[0])
+        self._prepare(batch, prompt_length, max_new_tokens)
+        prompt = torch.tensor(input_ids, device="cuda:0", dtype=torch.int64)
+        positions = torch.arange(prompt_length, device="cuda:0")
+        with torch.inference_mode():
+            self._cache.prefill_mode = True
+            self._cache.window_mode = False
+            for layer in self.model.model.layers:
+                layer.mlp.decode_mode = False
+            current = _forward_last(self.model, prompt, self._cache, positions, None)
+            self._cache.prefill_mode = False
+            for layer in self.model.model.layers:
+                layer.mlp.decode_mode = True
+            yield current[:, 0].tolist()
+            if max_new_tokens == 1:
+                return
+            if batch == 1:
+                self._cache.window_mode = True
+                current_token = int(current[0, 0])
+                if self._window_graph is None:
+                    self._capture_window(current_token, prompt_length)
+                guesses = [current_token] * 3
+                position = prompt_length
+                remaining = max_new_tokens - 1
+                while remaining:
+                    self._window_input.copy_(torch.tensor(
+                        [[current_token, *guesses]], dtype=torch.int64,
+                        device="cuda:0",
+                    ))
+                    self._position.fill_(position)
+                    self._window_graph.replay()
+                    outputs = self._window_graph_output[0].tolist()
+                    accepted = 1
+                    while (accepted < 4
+                           and guesses[accepted - 1] == outputs[accepted - 1]):
+                        accepted += 1
+                    emitted = min(accepted, remaining)
+                    for token in outputs[:emitted]:
+                        yield [token]
+                    remaining -= emitted
+                    current_token = outputs[accepted - 1]
+                    guesses = (outputs[accepted:]
+                               + [outputs[-1]] * (3 - len(outputs[accepted:])))
+                    position += accepted
+                return
+            if self._graph is None:
+                self._capture(current, prompt_length)
+            for position in range(prompt_length, prompt_length + max_new_tokens - 1):
+                self._input.copy_(current)
+                self._position.fill_(position)
+                self._graph.replay()
+                current = self._graph_output
+                yield current[:, 0].tolist()

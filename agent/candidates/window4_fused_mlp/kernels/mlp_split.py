@@ -17,12 +17,11 @@ def _project(X, GW, UW, GP, UP, B: tl.constexpr,
              BN: tl.constexpr, BK: tl.constexpr):
     tile = tl.program_id(0)
     split = tl.program_id(1)
-    # BM64 may enable Hopper MMA v3 lowering; B<=16 keeps the extra rows masked.
-    rows = tl.arange(0, 64)
+    rows = tl.arange(0, 16)
     cols = tile * BN + tl.arange(0, BN)
     kk = tl.arange(0, BK)
-    gate = tl.full((64, BN), 0, tl.float32)
-    up = tl.full((64, BN), 0, tl.float32)
+    gate = tl.full((16, BN), 0, tl.float32)
+    up = tl.full((16, BN), 0, tl.float32)
     for block in range(640 // BK):
         k = split * 640 + block * BK + kk
         x = tl.load(X + rows[:, None] * 2560 + k[None, :],
