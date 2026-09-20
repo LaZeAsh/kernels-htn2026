@@ -588,7 +588,18 @@
       "submissionId": "4d27e436-fc10-4d67-befc-ae8e5f94be1c",
       "runId": "dbccd645-6ea3-4c62-af0a-f5a8e6505629",
       "ranked": true,
-      "scoreTokensPerSecond": 854.0429258313983
+      "scoreTokensPerSecond": 854.0429258313983,
+      "calibrationRuns": [
+        {
+          "runId": "a6d66ae3-3875-4fef-884d-4740fe7160b0",
+          "submissionId": "4d27e436-fc10-4d67-befc-ae8e5f94be1c",
+          "commitSha": "a4ed38eb83474e08e104dc45300ae9c18f7dd960",
+          "stateWhenRecorded": "queued",
+          "resultStatus": "passed",
+          "ranked": true,
+          "scoreTokensPerSecond": 827.3975448975341
+        }
+      ]
     },
     {
       "id": "v52_large_batch_fused_mlp",
@@ -682,12 +693,15 @@
       "numericalRisk": "No local Triton compile or GPU run; hidden correctness and performance unmeasured",
       "commitSha": "5d7635998676408225090a4592d143df1241604a",
       "submissionId": "cf8c7b3a-abf8-45d4-aac3-a7313e334a01",
-      "runId": "cbd1e1a3-e5d5-4545-ab17-5b9c9ce86f7e"
+      "runId": "c20255de-c522-414e-b874-b0d667fbe445",
+      "priorRunIds": ["cbd1e1a3-e5d5-4545-ab17-5b9c9ce86f7e"],
+      "priorRunErrorCode": "harness_error",
+      "priorRunErrorMessage": "Prior run canceled after the 15-minute platform limit with no workload results."
     },
     {
       "id": "v58_native_down_column_major_b1_gemv",
-      "path": "agent/candidates/native_down_column_major_b1_gemv",
-      "disposition": "unmeasured",
+      "path": "engine",
+      "disposition": "active",
       "priority": 40,
       "reason": "Reviewed native down weight relayout rebased onto passing 854.042926 B1 GEMV source; logical BF16 values and Parameter identity preserved.",
       "numericalRisk": "native prefill and decode down GEMM selection, hidden correctness and timing unmeasured; transient init copy"
@@ -703,24 +717,32 @@
     {
       "id": "v61_flash_varlen_decode_b1_gemv",
       "path": "agent/candidates/flash_varlen_decode_b1_gemv",
-      "disposition": "queued",
+      "disposition": "rejected",
       "priority": 36,
       "reason": "Reviewed Flash varlen decode on passing 854.042926 B1 GEMV baseline; time-major KV uses a single cache without a second copy.",
       "numericalRisk": "GPU hidden correctness, TTFT, TPOT, memory and score unmeasured",
       "commitSha": "8430739b9773c52b4a1b369c36f484a38fff09bb",
       "submissionId": "22399106-1553-49d3-975d-979bc106817f",
-      "runId": "35dcf515-a704-4731-ad28-67756b678b43"
+      "runId": "35dcf515-a704-4731-ad28-67756b678b43",
+      "resultStatus": "passed",
+      "ranked": true,
+      "scoreTokensPerSecond": 829.3431326143739,
+      "rejectionReason": "Correctness passed but score below 854.042926 B1 GEMV baseline."
     },
     {
       "id": "v62_prefill_packed_gate_up_b1_gemv",
       "path": "agent/candidates/prefill_packed_gate_up_b1_gemv",
-      "disposition": "queued",
+      "disposition": "rejected",
       "priority": 37,
       "reason": "Reviewed prefill packed gate/up projection on passing 854.042926 B1 GEMV source; one packed weight storage per layer and BF16 cast boundaries retained.",
       "numericalRisk": "GPU hidden correctness and performance unmeasured; changed GEMM scheduling and weight storage",
       "commitSha": "7be625ef35b5b4da63838761566964d0ac5e88ae",
       "submissionId": "d2c46df3-d415-41c4-90b6-714c6299da81",
-      "runId": "facd664d-37f2-4f96-8cce-56073e8309b1"
+      "runId": "facd664d-37f2-4f96-8cce-56073e8309b1",
+      "resultStatus": "passed",
+      "ranked": true,
+      "scoreTokensPerSecond": 840.2000357382326,
+      "rejectionReason": "Correctness passed but score below 854.042926 B1 GEMV baseline."
     },
     {
       "id": "v63_last_query_prefill_b1_gemv",
@@ -732,11 +754,34 @@
     },
     {
       "id": "v64_fused_prefill_mlp_b1_gemv",
-      "path": "engine",
-      "disposition": "active",
+      "path": "agent/candidates/fused_prefill_mlp_b1_gemv",
+      "disposition": "rejected",
       "priority": 39,
       "reason": "Reviewed prefill-only fused gate/up GEMM and SwiGLU on passing 854.042926 B1 GEMV source for M>=64; native down projection retained.",
-      "numericalRisk": "BM64 BN64 BK64/128 dual FP32 accumulators with BF16 projection, SiLU and product boundaries; GPU hidden correctness, TTFT and memory unmeasured"
+      "numericalRisk": "BM64 BN64 BK64/128 dual FP32 accumulators with BF16 projection, SiLU and product boundaries; GPU hidden correctness, TTFT and memory unmeasured",
+      "commitSha": "50965d18467b22dea37cefbe7ab610535bd117dd",
+      "submissionId": "f644d437-23df-45e8-8432-756e4cfa6ded",
+      "runId": "bfabd03d-4f6f-442b-917c-8a923fddfc13",
+      "resultStatus": "passed",
+      "ranked": true,
+      "scoreTokensPerSecond": 828.3747776322439,
+      "rejectionReason": "Correctness passed but score below 854.042926 B1 GEMV baseline."
+    },
+    {
+      "id": "v65_cublaslt_workspace32_b1_gemv",
+      "path": "agent/candidates/cublaslt_workspace32_b1_gemv",
+      "disposition": "unmeasured",
+      "priority": 55,
+      "reason": "Reviewed one environment knob for cuBLASLt workspace on passing 854.042926 B1 GEMV source; otherwise isolated source.",
+      "numericalRisk": "GPU scheduling, memory and score unmeasured"
+    },
+    {
+      "id": "v66_b1_attention_bn32_b1_gemv",
+      "path": "agent/candidates/b1_attention_bn32_b1_gemv",
+      "disposition": "unmeasured",
+      "priority": 56,
+      "reason": "Reviewed B1-only grouped attention block N=32 on passing 854.042926 B1 GEMV source; B1 split cap remains 16.",
+      "numericalRisk": "Changed attention reduction partition/order; GPU hidden correctness and performance unmeasured"
     }
   ]
 }

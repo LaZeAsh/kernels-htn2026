@@ -1486,3 +1486,58 @@ Packed prefill was accepted from actual commit
 The reviewed fused prefill MLP stage is now live for a separate official
 test. Static compile, source comparison and packaging passed (12 imported
 files, 10,988 archive bytes); GPU correctness, TTFT and memory are unknown.
+
+Fused prefill was accepted from actual commit
+`50965d18467b22dea37cefbe7ab610535bd117dd` as submission
+`f644d437-23df-45e8-8432-756e4cfa6ded`, run
+`bfabd03d-4f6f-442b-917c-8a923fddfc13`, queued when recorded.
+An authorized calibration repeat of the immutable best B1 GEMV submission
+`4d27e436-fc10-4d67-befc-ae8e5f94be1c` started as separate run
+`a6d66ae3-3875-4fef-884d-4740fe7160b0` on the original commit
+`a4ed38eb83474e08e104dc45300ae9c18f7dd960`. The original
+854.0429258313983 best remains the recorded result; the repeat is
+tracked separately to estimate run variation. The reviewed one-knob
+`cublaslt_workspace32_b1_gemv` stage is registered unmeasured at priority 55.
+The reviewed B1 attention block-N32 stage is registered separately at
+priority 56; only the B1 grouped attention tile changes, with the split
+cap still 16. Its GPU correctness and timing are unmeasured.
+
+Flash varlen decode run `35dcf515-a704-4731-ad28-67756b678b43`
+passed correctness and ranked 829.3431326143739 tok/s, below the
+854.042926 B1 GEMV baseline; rejected for promotion. Report saved in
+`agent/runs/35dcf515-a704-4731-ad28-67756b678b43.json`.
+
+B2..4 fused GEMV run `cbd1e1a3-e5d5-4545-ab17-5b9c9ce86f7e`
+was canceled after three platform attempts with `harness_error`:
+"Terminated: the run exceeded the 15-minute time limit." No workload
+result exists, so no correctness or speed conclusion is recorded. Its
+report is preserved in `agent/runs/cbd1e1a3-e5d5-4545-ab17-5b9c9ce86f7e.json`;
+the immutable submission may be retried separately.
+
+Packed gate/up prefill run `facd664d-37f2-4f96-8cce-56073e8309b1`
+passed correctness and ranked 840.2000357382326 tok/s, below the
+854.042926 B1 GEMV baseline; rejected for promotion. Report saved in
+`agent/runs/facd664d-37f2-4f96-8cce-56073e8309b1.json`.
+
+Fused prefill MLP run `bfabd03d-4f6f-442b-917c-8a923fddfc13`
+passed correctness and ranked 828.3747776322439 tok/s, below the
+854.042926 B1 GEMV baseline; rejected for promotion. Report saved in
+`agent/runs/bfabd03d-4f6f-442b-917c-8a923fddfc13.json`.
+
+The immutable best submission's calibration repeat
+`a6d66ae3-3875-4fef-884d-4740fe7160b0` passed and ranked
+827.3975448975341 tok/s, versus its original 854.0429258313983.
+This is 3.12% lower on identical code and submission. The repeat report
+is preserved separately in `agent/runs/a6d66ae3-3875-4fef-884d-4740fe7160b0.json`;
+the original best score and run ID remain unchanged.
+
+The B2..4 fused GEMV immutable submission
+`cf8c7b3a-abf8-45d4-aac3-a7313e334a01` was retried as new official
+run `c20255de-c522-414e-b874-b0d667fbe445`, with the same source
+commit `5d7635998676408225090a4592d143df1241604a`. The canceled
+run `cbd1e1a3-e5d5-4545-ab17-5b9c9ce86f7e` remains in history.
+
+The reviewed `native_down_column_major_b1_gemv` candidate is now live
+for a separate official test. Static compile, staged source comparison
+and packaging passed (11 imported source files, 10,724 archive bytes).
+Its GPU correctness, weight-layout kernel choice and timing are unmeasured.
