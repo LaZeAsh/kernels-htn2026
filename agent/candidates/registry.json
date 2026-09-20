@@ -440,21 +440,28 @@
     {
       "id": "v41_output_down_norm_autotuned_mlp_cublaslt",
       "path": "agent/candidates/output_down_norm_autotuned_mlp_cublaslt",
-      "disposition": "queued",
+      "disposition": "rejected",
       "priority": 40,
       "reason": "Custom down projection plus norm composed with passing 841.845837 autotuned split SwiGLU/cuBLASLt; winning MLP source preserved.",
       "numericalRisk": "two kernel launches plus partial tensor traffic; hidden correctness and speed unmeasured",
       "commitSha": "9411624768095036c64c9dc6ee0d5d9f45258318",
       "submissionId": "327b8d6e-b145-4484-96b3-28d618c4ca79",
-      "runId": "427764f7-68c5-4e13-a004-88b429522c7b"
+      "runId": "427764f7-68c5-4e13-a004-88b429522c7b",
+      "resultStatus": "passed",
+      "ranked": true,
+      "scoreTokensPerSecond": 828.8992351551228,
+      "rejectionReason": "Correctness passed, but score 1.54% below passing 841.845837 baseline; all three public TPOT values slightly slower."
     },
     {
       "id": "v42_expanded_mlp_autotune",
-      "path": "engine",
-      "disposition": "active",
+      "path": "agent/candidates/expanded_mlp_autotune",
+      "disposition": "queued",
       "priority": 50,
       "reason": "Expand passing 841.845837 MLP autotune from four to eight fixed configurations: add BN128 BK64/128 with warps8 stages2 or warps4 stages3.",
-      "numericalRisk": "extra Triton compilation and tuning may exceed load plus warmup budget; GPU correctness/speed unmeasured"
+      "numericalRisk": "extra Triton compilation and tuning may exceed load plus warmup budget; GPU correctness/speed unmeasured",
+      "commitSha": "fbbacd674873afe59d2d139c7a06def82a726903",
+      "submissionId": "77bbaec3-c5e9-4377-abc1-936755632a96",
+      "runId": "3a9ce769-acb8-4126-91d5-2cd3d478a128"
     },
     {
       "id": "v43_qkv_warps8_autotuned_mlp",
@@ -463,6 +470,22 @@
       "priority": 60,
       "reason": "One-line QKV projection launch num_warps 4 to 8 on passing 841.845837 autotuned MLP baseline; fixed 48x4 grid and reducer unchanged.",
       "numericalRisk": "Triton register pressure, performance and hidden correctness unmeasured"
+    },
+    {
+      "id": "v44_graphed_prefill_autotuned_mlp",
+      "path": "engine",
+      "disposition": "active",
+      "priority": 20,
+      "reason": "Capture prefill on passing 841.845837 autotuned MLP baseline with unchanged prefill math and fresh prompt copy.",
+      "numericalRisk": "separate graph memory pool may raise peak memory; extra first warmup work and hidden timing unmeasured"
+    },
+    {
+      "id": "v45_interleaved_mlp_autotuned",
+      "path": "agent/candidates/interleaved_mlp_autotuned",
+      "disposition": "unmeasured",
+      "priority": 30,
+      "reason": "Interleaved gate/up MLP on passing 841.845837 autotuned baseline; reviewed exact 19456 physical columns and even/odd reducer BF16 boundaries.",
+      "numericalRisk": "~3.34 GiB extra weight copy and widened MMA resource/initialization costs; hidden correctness and speed unmeasured"
     }
   ]
 }

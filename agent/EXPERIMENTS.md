@@ -1023,3 +1023,46 @@ stage is withdrawn from scheduling after the separate tested compressed MLP
 path showed severe decode slowdown. The older stage itself has no correctness
 result, and its source remains archived. `agent/client.py` was not edited as
 part of this engine promotion.
+
+The expanded MLP autotune candidate was accepted from actual source commit
+`fbbacd674873afe59d2d139c7a06def82a726903`, submission
+`77bbaec3-c5e9-4377-abc1-936755632a96`, official run
+`3a9ce769-acb8-4126-91d5-2cd3d478a128`. It was queued when recorded;
+no correctness, compilation-budget or speed result is attributed yet.
+The down projection plus norm run is measuring, and the LM head retry is
+queued. Live engine source is unchanged.
+
+`graphed_prefill_autotuned_mlp` is staged unmeasured at priority 20 on the
+passing 841.845837 baseline. Root and Luna reviewed its lifecycle without
+finding a blocker: prefill math is unchanged and each generation copies a
+fresh prompt into the captured buffer. A separate graph pool may increase
+peak memory, and the first warmup does additional capture work. Those costs
+and official correctness remain unmeasured. It is not live.
+
+`interleaved_mlp_autotuned` is staged unmeasured at priority 30 on the
+passing 841.845837 baseline. Root and Luna reviewed its 19,456 physical
+columns, 152 or 76 output tiles, even/odd reducer and BF16 boundaries.
+The copied interleaved weights add about 3.34 GiB, and wider MMA tiles may
+cost registers or initialization time. Only the attention adapter and MLP
+kernel source differ; it is not live.
+
+## Down projection plus norm passed but slower
+
+The down projection plus norm candidate passed official run
+`427764f7-68c5-4e13-a004-88b429522c7b` at source commit
+`9411624768095036c64c9dc6ee0d5d9f45258318`, scoring 828.899235
+tokens/s. That is 1.54% below its passing 841.845837 baseline. Public
+TPOT was 4.281, 5.134 and 5.257 ms versus baseline 4.227, 5.043 and
+5.168 ms. Correctness passed; promotion is rejected for lack of speed gain.
+The full report is saved under `agent/runs/`. The live expanded MLP engine is
+unchanged.
+
+## Prefill graph on passing MLP baseline live
+
+The live engine is now exactly `graphed_prefill_autotuned_mlp` on the passing
+841.845837 autotuned MLP source. The full-prompt math remains unchanged;
+a persistent prompt buffer and separate CUDA graph capture its prefill path.
+The first warmup still runs the original prefill before capture, and later
+samples replay the graph after copying each fresh prompt. Peak memory and
+warmup budget, along with official correctness and speed, remain unmeasured.
+The down projection plus norm result remains archived at 828.899235.

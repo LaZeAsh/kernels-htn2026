@@ -128,7 +128,6 @@ class Engine:
         self._graph_shape = None
         self._cache = None
         self._graph = None
-        self._prefill_graph = None
 
     def _prepare(self, batch, prompt_length, output_length):
         shape = (batch, prompt_length, output_length)
@@ -143,36 +142,11 @@ class Engine:
         )
         self._input = torch.empty((batch, 1), device="cuda:0", dtype=torch.int64)
         self._position = torch.empty((1,), device="cuda:0", dtype=torch.int64)
-        self._prefill_input = torch.empty(
-            (batch, prompt_length), device="cuda:0", dtype=torch.int64,
-        )
-        self._prefill_positions = torch.arange(prompt_length, device="cuda:0")
         self._graph_shape = shape
         self._graph = None
-        self._prefill_graph = None
 
     def _decode(self):
         return _decode_last(self.model, self._input, self._cache, self._position)
-
-    def _capture_prefill(self, prompt):
-        """Capture the unchanged full-prompt path against persistent buffers."""
-        stream = torch.cuda.Stream()
-        stream.wait_stream(torch.cuda.current_stream())
-        with torch.cuda.stream(stream):
-            self._prefill_input.copy_(prompt)
-            _forward_last(
-                self.model, self._prefill_input, self._cache,
-                self._prefill_positions, None,
-            )  # warm allocator and SDPA on the capture stream
-            graph = torch.cuda.CUDAGraph()
-            with torch.cuda.graph(graph):
-                output = _forward_last(
-                    self.model, self._prefill_input, self._cache,
-                    self._prefill_positions, None,
-                )
-        torch.cuda.current_stream().wait_stream(stream)
-        self._prefill_graph = graph
-        self._prefill_graph_output = output
 
     def _capture(self, token, position):
         previous_blas = torch.backends.cuda.preferred_blas_library()
@@ -199,20 +173,12 @@ class Engine:
         batch, prompt_length = len(input_ids), len(input_ids[0])
         self._prepare(batch, prompt_length, max_new_tokens)
         prompt = torch.tensor(input_ids, device="cuda:0", dtype=torch.int64)
+        positions = torch.arange(prompt_length, device="cuda:0")
         with torch.inference_mode():
             self._cache.prefill_mode = True
             for layer in self.model.model.layers:
                 layer.mlp.decode_mode = False
-            if self._prefill_graph is None:
-                current = _forward_last(
-                    self.model, prompt, self._cache,
-                    self._prefill_positions, None,
-                )
-                self._capture_prefill(prompt)
-            else:
-                self._prefill_input.copy_(prompt)
-                self._prefill_graph.replay()
-                current = self._prefill_graph_output
+            current = _forward_last(self.model, prompt, self._cache, positions, None)
             self._cache.prefill_mode = False
             for layer in self.model.model.layers:
                 layer.mlp.decode_mode = True
