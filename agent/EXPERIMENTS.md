@@ -852,3 +852,45 @@ MLP stage is retained but withdrawn as superseded.
 priority 30 on the same passing baseline. The older LM head stage on the
 745.470297 baseline is retained but withdrawn. Neither newly composed path
 has an official GPU result yet.
+
+## Autotuned MLP queued; transposed report pending local save
+
+The autotuned fused MLP on the passing precise PV/QKV/cuBLASLt baseline was
+accepted from actual source commit `086b72e99893f6484536bed81115332e00714e21`,
+submission `42b08274-7eef-40b3-927d-4759e1f15f22`, official run
+`570b44be-35bc-4582-8ad7-9a3f039183c9`. It was queued when recorded.
+The transposed MLP run `0ed08d2b-ad1b-4993-a015-bcc4030c4d19` was
+reported succeeded, but its full run JSON had not yet been saved locally, so
+its score and baseline comparison remain pending. The Flash GQA prefill run
+`5025ba67-5819-441f-bd93-bb8f032de6da` is measuring. Live source is
+unchanged.
+
+## Autotuned MLP leads; fused LM head rebased
+
+The transposed MLP plus cuBLASLt candidate passed official run
+`0ed08d2b-ad1b-4993-a015-bcc4030c4d19`, scoring 772.522708 tokens/s.
+This is 0.45% below its 775.994986 cuBLASLt baseline and 0.49% below
+the former 776.343294 combined best. Public TPOT improved modestly versus
+its baseline, while public TTFT varied; no promotion is chosen.
+
+The Flash GQA prefill on the combined cuBLASLt source failed official run
+`5025ba67-5819-441f-bd93-bb8f032de6da` with hidden
+`incorrect_output`. All public workloads passed. It is rejected for
+promotion or unchanged retry.
+
+The autotuned fused MLP on precise PV/QKV/cuBLASLt passed official run
+`570b44be-35bc-4582-8ad7-9a3f039183c9` at actual source commit
+`086b72e99893f6484536bed81115332e00714e21`, scoring 841.845837
+tokens/s, the new best. All three full run reports are saved under
+`agent/runs/`.
+
+`fused_lm_head_autotuned_mlp` is now live. Relative to the passing 841.845837
+source, only the LM head helper, import, and decode head dispatch are added;
+the autotuned MLP source is bytewise unchanged. Prefill and batch fallback
+remain on their prior paths. The older fused LM head stage on 776.343294 is
+retained but withdrawn as superseded. The new composition has no GPU result.
+
+The separately reviewed `window4_jacobi_b1` prototype is registered
+unmeasured at priority 20 on the passing 776.343294 combined baseline. Its
+review included 100 CPU oracle simulations and static source inspection, not
+GPU execution. It is not part of the live fused LM head engine.

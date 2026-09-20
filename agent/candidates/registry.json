@@ -181,21 +181,38 @@
     {
       "id": "v34_fused_prefill_gqa_precise_qkv_cublaslt",
       "path": "agent/candidates/fused_prefill_gqa_precise_qkv_cublaslt",
-      "disposition": "queued",
+      "disposition": "rejected",
       "priority": 5,
       "reason": "Direct GQA Flash prefill only on passing 776.343294 precise PV/QKV/cuBLASLt baseline; decode and fused prefill projection source unchanged.",
       "numericalRisk": "hidden correctness and latency interaction unmeasured",
       "commitSha": "c4bf8b495be921fa3444a04877fa22a90b33428f",
       "submissionId": "30653b0f-997d-43bd-a292-e5d2c6a53ff4",
-      "runId": "5025ba67-5819-441f-bd93-bb8f032de6da"
+      "runId": "5025ba67-5819-441f-bd93-bb8f032de6da",
+      "resultStatus": "failed",
+      "failureCode": "incorrect_output",
+      "ranked": false,
+      "rejectionReason": "Official hidden correctness failure despite public passing; do not retry unchanged."
     },
     {
       "id": "v36_autotuned_fused_mlp_precise_qkv_cublaslt",
-      "path": "engine",
-      "disposition": "active",
+      "path": "agent/candidates/autotuned_fused_mlp_precise_qkv_cublaslt",
+      "disposition": "passed",
       "priority": 25,
       "reason": "Autotuned decode split SwiGLU on passing 776.343294 precise PV/QKV/cuBLASLt source; only MLP path changes.",
-      "numericalRisk": "custom GEMM reduction and autotune warmup unmeasured"
+      "numericalRisk": "custom GEMM reduction and autotune warmup unmeasured",
+      "commitSha": "086b72e99893f6484536bed81115332e00714e21",
+      "submissionId": "42b08274-7eef-40b3-927d-4759e1f15f22",
+      "runId": "570b44be-35bc-4582-8ad7-9a3f039183c9",
+      "ranked": true,
+      "scoreTokensPerSecond": 841.8458371318777
+    },
+    {
+      "id": "v38_fused_lm_head_autotuned_mlp",
+      "path": "engine",
+      "disposition": "active",
+      "priority": 5,
+      "reason": "Only fused full-vocabulary LM head helper/import/decode dispatch added to passing 841.845837 autotuned MLP; MLP kernel bytewise unchanged.",
+      "numericalRisk": "custom full-vocabulary dot/argmax hidden correctness and warmup unmeasured"
     },
     {
       "id": "v10_combined_tc_residual",
@@ -347,13 +364,15 @@
     {
       "id": "v32_transposed_mlp_cublaslt",
       "path": "agent/candidates/transposed_mlp_cublaslt",
-      "disposition": "validating",
+      "disposition": "passed",
       "priority": 20,
       "reason": "Transposed BF16 gate/up weight copies for decode on passing cuBLASLt QKV baseline 775.994986; native weights retained for prefill.",
       "numericalRisk": "extra weight memory and altered GEMM scheduling; hidden correctness/performance unmeasured",
       "commitSha": "6ebb9c4eed588daf0906b4b1ba7b6977631bcf4c",
       "submissionId": "1d06a140-919c-4d88-8318-27dca99e6c94",
-      "runId": "0ed08d2b-ad1b-4993-a015-bcc4030c4d19"
+      "runId": "0ed08d2b-ad1b-4993-a015-bcc4030c4d19",
+      "ranked": true,
+      "scoreTokensPerSecond": 772.5227082513336
     },
     {
       "id": "v33_fused_lm_head_cublaslt",
@@ -375,10 +394,19 @@
     {
       "id": "v37_fused_lm_head_precise_qkv_cublaslt",
       "path": "agent/candidates/fused_lm_head_precise_qkv_cublaslt",
-      "disposition": "unmeasured",
+      "disposition": "withdrawn",
       "priority": 30,
       "reason": "Full-vocabulary fused LM head and two-level argmax on passing 776.343294 precise PV/QKV/cuBLASLt source.",
-      "numericalRisk": "custom full-vocabulary FP32 dot, BF16 logit boundary and autotune unmeasured"
+      "numericalRisk": "custom full-vocabulary FP32 dot, BF16 logit boundary and autotune unmeasured",
+      "withdrawalReason": "Superseded by fused_lm_head_autotuned_mlp on passing 841.845837 baseline; older staged source retained."
+    },
+    {
+      "id": "v39_window4_jacobi_b1",
+      "path": "agent/candidates/window4_jacobi_b1",
+      "disposition": "unmeasured",
+      "priority": 20,
+      "reason": "Window-4 Jacobi batch-1 prototype on passing 776.343294 combined precise PV/QKV/cuBLASLt base; independent of current fused LM/MLP composition.",
+      "numericalRisk": "CPU oracle simulations and static source review only; GPU correctness, latency, graph behavior unmeasured"
     }
   ]
 }

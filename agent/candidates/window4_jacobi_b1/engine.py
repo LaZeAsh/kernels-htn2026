@@ -8,7 +8,6 @@ from transformers import AutoModelForCausalLM
 
 from kernels.rmsnorm import rms_norm
 from kernels.residual_norm import add_norm
-from kernels.lm_head import fused_lm_argmax
 from attention import install_direct_gqa
 
 
@@ -38,6 +37,7 @@ class FixedCache:
         self.values = [torch.zeros_like(k) for k in self.keys]
         self.prefill_length = 0
         self.prefill_mode = True
+        self.window_mode = False
 
     def update(self, key_states, value_states, layer_idx, cache_kwargs=None):
         k, v = self.keys[layer_idx], self.values[layer_idx]
@@ -107,9 +107,26 @@ def _decode_last(model, token_ids, cache, positions):
             after_attention, mlp_output,
             next_norm.weight, next_norm.variance_epsilon,
         )
-    if token_ids.shape[0] <= 16:
-        return fused_lm_argmax(normalized, model.lm_head.weight)
     return model.lm_head(normalized).argmax(-1)
+
+
+@torch.inference_mode()
+def _window_forward(model, token_ids, cache, positions):
+    """Teacher-force all four proposed tokens with a causal cache mask."""
+    base = model.model
+    hidden = base.embed_tokens(token_ids)
+    position_embeddings = base.rotary_emb(hidden, positions.unsqueeze(0))
+    for layer in base.layers:
+        normalized = layer.input_layernorm(hidden)
+        attention = layer.self_attn(
+            normalized, position_embeddings=position_embeddings,
+            attention_mask=None, past_key_value=cache,
+            cache_position=positions,
+        )[0]
+        hidden = hidden + attention
+        mlp_input = layer.post_attention_layernorm(hidden)
+        hidden = hidden + layer.mlp(mlp_input)
+    return model.lm_head(base.norm(hidden)).argmax(-1)
 
 
 class Engine:
@@ -131,6 +148,7 @@ class Engine:
         self._graph_shape = None
         self._cache = None
         self._graph = None
+        self._window_graph = None
 
     def _prepare(self, batch, prompt_length, output_length):
         shape = (batch, prompt_length, output_length)
@@ -141,15 +159,42 @@ class Engine:
         head_dim = self.model.model.layers[0].self_attn.k_proj.out_features // heads
         self._cache = FixedCache(
             len(self.model.model.layers), batch, heads,
-            prompt_length + output_length, head_dim,
+            prompt_length + output_length + (4 if batch == 1 else 0), head_dim,
         )
         self._input = torch.empty((batch, 1), device="cuda:0", dtype=torch.int64)
         self._position = torch.empty((1,), device="cuda:0", dtype=torch.int64)
+        if batch == 1:
+            self._window_input = torch.empty((1, 4), device="cuda:0", dtype=torch.int64)
+            self._window_offsets = torch.arange(4, device="cuda:0", dtype=torch.int64)
         self._graph_shape = shape
         self._graph = None
+        self._window_graph = None
 
     def _decode(self):
         return _decode_last(self.model, self._input, self._cache, self._position)
+
+    def _window_step(self):
+        positions = self._position + self._window_offsets
+        return _window_forward(self.model, self._window_input, self._cache, positions)
+
+    def _capture_window(self, current, position):
+        previous_blas = torch.backends.cuda.preferred_blas_library()
+        try:
+            torch.backends.cuda.preferred_blas_library("cublaslt")
+            stream = torch.cuda.Stream()
+            stream.wait_stream(torch.cuda.current_stream())
+            with torch.cuda.stream(stream):
+                self._window_input.fill_(int(current))
+                self._position.fill_(position)
+                self._window_step()
+                graph = torch.cuda.CUDAGraph()
+                with torch.cuda.graph(graph):
+                    output = self._window_step()
+            torch.cuda.current_stream().wait_stream(stream)
+        finally:
+            torch.backends.cuda.preferred_blas_library(previous_blas)
+        self._window_graph = graph
+        self._window_graph_output = output
 
     def _capture(self, token, position):
         previous_blas = torch.backends.cuda.preferred_blas_library()
@@ -179,6 +224,7 @@ class Engine:
         positions = torch.arange(prompt_length, device="cuda:0")
         with torch.inference_mode():
             self._cache.prefill_mode = True
+            self._cache.window_mode = False
             for layer in self.model.model.layers:
                 layer.mlp.decode_mode = False
             current = _forward_last(self.model, prompt, self._cache, positions, None)
@@ -187,6 +233,35 @@ class Engine:
                 layer.mlp.decode_mode = True
             yield current[:, 0].tolist()
             if max_new_tokens == 1:
+                return
+            if batch == 1:
+                self._cache.window_mode = True
+                current_token = int(current[0, 0])
+                if self._window_graph is None:
+                    self._capture_window(current_token, prompt_length)
+                guesses = [current_token] * 3
+                position = prompt_length
+                remaining = max_new_tokens - 1
+                while remaining:
+                    self._window_input.copy_(torch.tensor(
+                        [[current_token, *guesses]], dtype=torch.int64,
+                        device="cuda:0",
+                    ))
+                    self._position.fill_(position)
+                    self._window_graph.replay()
+                    outputs = self._window_graph_output[0].tolist()
+                    accepted = 1
+                    while (accepted < 4
+                           and guesses[accepted - 1] == outputs[accepted - 1]):
+                        accepted += 1
+                    emitted = min(accepted, remaining)
+                    for token in outputs[:emitted]:
+                        yield [token]
+                    remaining -= emitted
+                    current_token = outputs[accepted - 1]
+                    guesses = (outputs[accepted:]
+                               + [outputs[-1]] * (3 - len(outputs[accepted:])))
+                    position += accepted
                 return
             if self._graph is None:
                 self._capture(current, prompt_length)
