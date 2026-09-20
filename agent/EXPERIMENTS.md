@@ -1244,3 +1244,38 @@ kernel is bytewise the passing BM16 source. The fixed QKV grid, B≤16 masks,
 partial tensor and reducer remain unchanged. GPU lowering, correctness and
 speed are unmeasured; the earlier slower BM64 MLP result does not determine
 this independent QKV result. Prompt lookup remains staged and unsubmitted.
+
+The QKV BM64 probe was accepted at actual source commit
+`83836a0e50e59ae8b98cb26a01c40402eb4440da`, submission
+`fe768803-bd09-42e4-a31d-84167f04e72a`, official run
+`09c47c49-0f96-4a37-8a58-316d7fc124ac`. It was queued when recorded;
+no compiler diagnostic or score is attributed yet.
+
+`large_batch_fused_mlp` is registered unmeasured at priority 80 on the
+passing 841.845837 baseline. Root reviewed a separate BM64 math helper for
+batches 17 through 64. B≤16 keeps the winning path, B>64 uses native
+fallback, and no hidden batch shape is assumed. Partials may occupy about
+19.9 MB at batch 64; warmup logs compiler resources without inputs. GPU
+correctness, memory and speed remain unmeasured. It is not live.
+
+## Interleaved MLP passed but did not improve rank
+
+The interleaved MLP candidate passed official run
+`429ac48e-7149-4601-9990-35e05b985ba6` at source commit
+`98aad80d705e0d430c6925e11727bce214cc33af`, scoring 836.634909
+tokens/s. That is 0.62% below its passing 841.845837 baseline. Public
+TPOT was 4.214, 5.060 and 5.159 ms versus baseline 4.227, 5.043 and
+5.168 ms, a mixed and small difference. Correctness passed, but promotion
+is rejected for no ranked speed gain, especially given the extra weight
+copies. The full report is saved; live QKV BM64 source is unchanged.
+
+## Batch-one fused GEMV live
+
+The live engine is now the reviewed `b1_fused_mlp_gemv` stage on the passing
+841.845837 baseline. Batch one uses a one-launch gate/up GEMV and SwiGLU
+kernel without FP32 partial tensors, with a once-per-process warmup compiler
+diagnostic. Batches above one retain the winning split MLP path through 16
+and native fallback above 16. The QKV projection is back to the passing
+BM16 source; the QKV BM64 probe remains an independent queued submission.
+GPU compilation, correctness, load budget and speed for this B1 kernel
+remain unmeasured. Window4 fused MLP also remains queued separately.

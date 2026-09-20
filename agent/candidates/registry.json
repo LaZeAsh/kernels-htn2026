@@ -497,13 +497,17 @@
     {
       "id": "v45_interleaved_mlp_autotuned",
       "path": "agent/candidates/interleaved_mlp_autotuned",
-      "disposition": "queued",
+      "disposition": "rejected",
       "priority": 30,
       "reason": "Interleaved gate/up MLP on passing 841.845837 autotuned baseline; reviewed exact 19456 physical columns and even/odd reducer BF16 boundaries.",
       "numericalRisk": "~3.34 GiB extra weight copy and widened MMA resource/initialization costs; hidden correctness and speed unmeasured",
       "commitSha": "98aad80d705e0d430c6925e11727bce214cc33af",
       "submissionId": "786d67aa-4d6f-4e1a-a0eb-b2447aeb8853",
-      "runId": "429ac48e-7149-4601-9990-35e05b985ba6"
+      "runId": "429ac48e-7149-4601-9990-35e05b985ba6",
+      "resultStatus": "passed",
+      "ranked": true,
+      "scoreTokensPerSecond": 836.634909453781,
+      "rejectionReason": "Correctness passed but ranked score 0.62% below 841.845837 baseline; no convincing speed gain for extra 3.34 GiB copies."
     },
     {
       "id": "v46_native_down_column_major",
@@ -541,11 +545,14 @@
     },
     {
       "id": "v49_wgmma_qkv_bm64",
-      "path": "engine",
-      "disposition": "active",
+      "path": "agent/candidates/wgmma_qkv_bm64",
+      "disposition": "queued",
       "priority": 55,
       "reason": "QKV projection row tile 16 to 64 and FP32 accumulator 64x128 on passing 841.845837 baseline; fixed 48x4 grid, row mask, partial shape and reducer unchanged.",
-      "numericalRisk": "GPU/PTX path, padded work, registers, compilation, hidden correctness and speed unverified"
+      "numericalRisk": "GPU/PTX path, padded work, registers, compilation, hidden correctness and speed unverified",
+      "commitSha": "83836a0e50e59ae8b98cb26a01c40402eb4440da",
+      "submissionId": "fe768803-bd09-42e4-a31d-84167f04e72a",
+      "runId": "09c47c49-0f96-4a37-8a58-316d7fc124ac"
     },
     {
       "id": "v50_window4_prompt_lookup",
@@ -557,11 +564,19 @@
     },
     {
       "id": "v51_b1_fused_mlp_gemv",
-      "path": "agent/candidates/b1_fused_mlp_gemv",
-      "disposition": "unmeasured",
+      "path": "engine",
+      "disposition": "active",
       "priority": 75,
       "reason": "B1-only fused gate/up GEMV on passing 841.845837 baseline: original BF16 weights, full K2560 padded 4096, FP32 multiply/sum, BF16 projection/SiLU/product boundaries; B>1 winning MLP unchanged.",
       "numericalRisk": "high CTA/register demand, reduction-order numerics and six-config autotune warmup unmeasured on GPU"
+    },
+    {
+      "id": "v52_large_batch_fused_mlp",
+      "path": "agent/candidates/large_batch_fused_mlp",
+      "disposition": "unmeasured",
+      "priority": 80,
+      "reason": "Separate passing BM64 math helper for batches 17..64 on 841.845837 base; B<=16 winner unchanged, B>64 native fallback, no hidden-batch assumption.",
+      "numericalRisk": "~19.9 MB partials at B64 plus warm compiler diagnostics; hidden correctness/speed and memory unmeasured"
     }
   ]
 }
