@@ -616,7 +616,7 @@
     {
       "id": "v54_prefill_cublaslt_b1_gemv",
       "path": "agent/candidates/prefill_cublaslt_b1_gemv",
-      "disposition": "validating",
+      "disposition": "measuring",
       "priority": 10,
       "reason": "One-line preferred cuBLASLt setting in initialization on passing 854.042926 B1 GEMV source; affects native prefill and decode BLAS scheduling.",
       "numericalRisk": "hidden correctness, TTFT and score unmeasured for changed native prefill GEMMs",
@@ -626,19 +626,30 @@
     },
     {
       "id": "v55_last_token_mlp_prefill_b1_gemv",
-      "path": "engine",
-      "disposition": "active",
+      "path": "agent/candidates/last_token_mlp_prefill_b1_gemv",
+      "disposition": "queued",
       "priority": 15,
       "reason": "Reviewed isolated last-token MLP prefill stage on passing B1 GEMV source; ready after v54 submission.",
-      "numericalRisk": "GPU hidden correctness and timing unmeasured"
+      "numericalRisk": "GPU hidden correctness and timing unmeasured",
+      "commitSha": "1dd933fa33dfaaab845db686a4b2f59a2552a0ed",
+      "submissionId": "42cc91ec-e6e8-4745-9083-f481ea7dce3b",
+      "runId": "adc369ae-bb29-4265-8e1d-7fd9a155267e"
     },
     {
       "id": "v56_prefill_add_norm_b1_gemv",
-      "path": "agent/candidates/prefill_add_norm_b1_gemv",
-      "disposition": "unmeasured",
+      "path": "engine",
+      "disposition": "active",
       "priority": 20,
       "reason": "Reviewed prefill forward add_norm fusion on passing B1 GEMV source; flattened rows use proven add_norm and full prompt MLP remains.",
       "numericalRisk": "official hidden correctness, TTFT and score unmeasured"
+    },
+    {
+      "id": "v57_b1_down_gemv_residual",
+      "path": "agent/candidates/b1_down_gemv_residual",
+      "disposition": "unmeasured",
+      "priority": 30,
+      "reason": "B1-only down GEMV plus residual on passing 854.042926 B1 GEMV baseline; five K2048 chunks cover 9728, BF16 projection/residual boundary preserved, no split-K partial allocation.",
+      "numericalRisk": "six ROWS1/2/4 by warps4/8 configs; GPU correctness and performance unmeasured"
     }
   ]
 }

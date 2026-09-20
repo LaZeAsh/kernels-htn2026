@@ -1374,3 +1374,26 @@ token needed for first output. The decode B1 GEMV source is unchanged.
 Hidden correctness, TTFT and score for this prefill change remain
 unmeasured. `prefill_add_norm_b1_gemv` remains staged as the next isolated
 prefill experiment.
+
+`b1_down_gemv_residual` is registered unmeasured at priority 30 after the
+three prefill experiments. Root reviewed its B1-only down GEMV and residual
+path: five K2048 chunks cover 9728 input columns; the BF16 projection and
+residual cast boundary is preserved, and no split-K partial tensor is
+allocated. Six fixed ROWS (1/2/4) by warps (4/8) choices remain. GPU
+correctness and speed are unknown, and no performance gain is claimed.
+It is not live.
+
+## Last-token prefill queued; prefill add-norm live
+
+The last-token MLP prefill candidate was accepted from actual source commit
+`1dd933fa33dfaaab845db686a4b2f59a2552a0ed` as submission
+`42cc91ec-e6e8-4745-9083-f481ea7dce3b`, official run
+`adc369ae-bb29-4265-8e1d-7fd9a155267e`. It was queued when recorded;
+no result is attributed. Prefill cuBLASLt run
+`83e9f201-f5d7-4e88-9897-fa3a5b43ec07` is measuring.
+
+The live engine is now the reviewed `prefill_add_norm_b1_gemv` stage on the
+passing 854.042926 B1 GEMV baseline. Its prefill forward uses flattened
+rows and the proven `add_norm` kernel around full prompt MLP work. Decode
+source is unchanged. Official hidden correctness, TTFT and speed remain
+unmeasured. `b1_down_gemv_residual` is staged separately at priority 30.

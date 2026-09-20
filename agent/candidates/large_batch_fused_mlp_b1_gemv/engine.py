@@ -59,38 +59,20 @@ class FixedCache:
 @torch.inference_mode()
 def _forward_last(model, token_ids, cache, positions, attention_mask):
     base = model.model
-    residual = base.embed_tokens(token_ids)
-    batch, length, width = residual.shape
-    rows = batch * length
+    hidden = base.embed_tokens(token_ids)
     position_ids = positions.unsqueeze(0)
-    position_embeddings = base.rotary_emb(residual, position_ids)
-    layers = base.layers
-    normalized = layers[0].input_layernorm(residual)
-    for index, layer in enumerate(layers):
-        attention_output = layer.self_attn(
-            normalized,
-            position_embeddings=position_embeddings,
+    position_embeddings = base.rotary_emb(hidden, position_ids)
+    for layer in base.layers:
+        hidden = layer(
+            hidden,
             attention_mask=attention_mask,
+            position_ids=position_ids,
             past_key_value=cache,
+            use_cache=True,
             cache_position=positions,
+            position_embeddings=position_embeddings,
         )[0]
-        after_attention, mlp_input = add_norm(
-            residual.reshape(rows, 1, width),
-            attention_output.reshape(rows, 1, width),
-            layer.post_attention_layernorm.weight,
-            layer.post_attention_layernorm.variance_epsilon,
-        )
-        mlp_output = layer.mlp(mlp_input.reshape(batch, length, width))
-        next_norm = (layers[index + 1].input_layernorm
-                     if index + 1 < len(layers) else base.norm)
-        residual, normalized = add_norm(
-            after_attention,
-            mlp_output.reshape(rows, 1, width),
-            next_norm.weight, next_norm.variance_epsilon,
-        )
-        residual = residual.reshape(batch, length, width)
-        normalized = normalized.reshape(batch, length, width)
-    return model.lm_head(normalized[:, -1:, :]).argmax(-1)
+    return model.lm_head(base.norm(hidden[:, -1:, :])).argmax(-1)
 
 
 @torch.inference_mode()
