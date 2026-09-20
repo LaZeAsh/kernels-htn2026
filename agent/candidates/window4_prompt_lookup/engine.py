@@ -146,6 +146,27 @@ def _window_forward(model, token_ids, cache, positions):
     return model.lm_head(normalized.reshape(1, 4, 2560)).argmax(-1)
 
 
+def _prompt_lookups(prompt):
+    """Prompt-local 4/3-token contexts with three known following tokens."""
+    tables = {4: {}, 3: {}}
+    for width, table in tables.items():
+        for start in range(len(prompt) - width - 2):
+            table[tuple(prompt[start:start + width])] = tuple(
+                prompt[start + width:start + width + 3]
+            )
+    return tables
+
+
+def _record_emitted_context(history, tables):
+    """Add only contexts whose third following token was just emitted."""
+    for width, table in tables.items():
+        start = len(history) - width - 3
+        if start >= 0:
+            table[tuple(history[start:start + width])] = tuple(
+                history[start + width:start + width + 3]
+            )
+
+
 class Engine:
     def __init__(self, model_path: str) -> None:
         torch.backends.cuda.matmul.allow_tf32 = False
@@ -254,12 +275,22 @@ class Engine:
             if batch == 1:
                 self._cache.window_mode = True
                 current_token = int(current[0, 0])
+                tables = _prompt_lookups(input_ids[0])
+                history = list(input_ids[0])
+                history.append(current_token)  # first output was already yielded
+                _record_emitted_context(history, tables)
                 if self._window_graph is None:
                     self._capture_window(current_token, prompt_length)
                 guesses = [current_token] * 3
                 position = prompt_length
                 remaining = max_new_tokens - 1
                 while remaining:
+                    for width in (4, 3):
+                        if len(history) >= width:
+                            proposal = tables[width].get(tuple(history[-width:]))
+                            if proposal is not None:
+                                guesses = list(proposal)
+                                break
                     self._window_input.copy_(torch.tensor(
                         [[current_token, *guesses]], dtype=torch.int64,
                         device="cuda:0",
@@ -273,12 +304,15 @@ class Engine:
                         accepted += 1
                     emitted = min(accepted, remaining)
                     for token in outputs[:emitted]:
+                        history.append(token)
+                        _record_emitted_context(history, tables)
                         yield [token]
                     remaining -= emitted
-                    current_token = outputs[accepted - 1]
-                    guesses = (outputs[accepted:]
-                               + [outputs[-1]] * (3 - len(outputs[accepted:])))
-                    position += accepted
+                    if remaining:
+                        current_token = outputs[accepted - 1]
+                        guesses = (outputs[accepted:]
+                                   + [outputs[-1]] * (3 - len(outputs[accepted:])))
+                        position += accepted
                 return
             if self._graph is None:
                 self._capture(current, prompt_length)

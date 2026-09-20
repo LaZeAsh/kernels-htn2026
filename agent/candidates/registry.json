@@ -482,13 +482,17 @@
     {
       "id": "v44_graphed_prefill_autotuned_mlp",
       "path": "agent/candidates/graphed_prefill_autotuned_mlp",
-      "disposition": "queued",
+      "disposition": "rejected",
       "priority": 20,
       "reason": "Capture prefill on passing 841.845837 autotuned MLP baseline with unchanged prefill math and fresh prompt copy.",
       "numericalRisk": "separate graph memory pool may raise peak memory; extra first warmup work and hidden timing unmeasured",
       "commitSha": "70daf66e04b62a7b12ec3a3cc28fd6ce28046006",
       "submissionId": "8b3835e9-481a-4014-97a1-2ac972dee9eb",
-      "runId": "63c0dc6d-edb1-4cd2-b29a-bb00d0cfaeab"
+      "runId": "63c0dc6d-edb1-4cd2-b29a-bb00d0cfaeab",
+      "resultStatus": "passed",
+      "ranked": true,
+      "scoreTokensPerSecond": 822.9960667821762,
+      "rejectionReason": "Correctness passed but ranked score 2.24% below 841.845837 baseline; public TPOT all slightly slower."
     },
     {
       "id": "v45_interleaved_mlp_autotuned",
@@ -511,19 +515,38 @@
     },
     {
       "id": "v47_wgmma_mlp_bm64",
-      "path": "engine",
-      "disposition": "active",
+      "path": "agent/candidates/wgmma_mlp_bm64",
+      "disposition": "queued",
       "priority": 35,
       "reason": "MLP projection BM16 to BM64 on passing 841.845837 base, retaining B<=16 row mask and split/reducer; may enable WGMMA with eligible pinned Triton v3 shapes.",
-      "numericalRisk": "actual PTX path unobserved; padded FLOPs, registers, compile and hidden speed/correctness unmeasured"
+      "numericalRisk": "actual PTX path unobserved; padded FLOPs, registers, compile and hidden speed/correctness unmeasured",
+      "commitSha": "438c62519e089ef2a43900dc35407b83fd9ffc50",
+      "submissionId": "a6a14688-aba7-433d-bc6d-fe1171b82d50",
+      "runId": "6d1f61c5-587f-4e8a-8188-07fc465b5dc4"
     },
     {
       "id": "v48_window4_fused_mlp",
-      "path": "agent/candidates/window4_fused_mlp",
-      "disposition": "unmeasured",
+      "path": "engine",
+      "disposition": "active",
       "priority": 45,
       "reason": "Window4 acceptance/cache with passing 841.845837 MLP/residual fusion; batch1 flattens GEMM/norm token rows four while attention/cache retain B1T4; B>1 follows ordinary passing path.",
       "numericalRisk": "combination hidden numerical correctness and timing unmeasured; prior window4 alone was correct but slower"
+    },
+    {
+      "id": "v49_wgmma_qkv_bm64",
+      "path": "agent/candidates/wgmma_qkv_bm64",
+      "disposition": "unmeasured",
+      "priority": 55,
+      "reason": "QKV projection row tile 16 to 64 and FP32 accumulator 64x128 on passing 841.845837 baseline; fixed 48x4 grid, row mask, partial shape and reducer unchanged.",
+      "numericalRisk": "GPU/PTX path, padded work, registers, compilation, hidden correctness and speed unverified"
+    },
+    {
+      "id": "v50_window4_prompt_lookup",
+      "path": "agent/candidates/window4_prompt_lookup",
+      "disposition": "unmeasured",
+      "priority": 46,
+      "reason": "CPU 3/4-context lookup proposes three known following tokens on unmeasured window4_fused_mlp; reset per prompt and update history, full-model acceptance/cache unchanged.",
+      "numericalRisk": "depends on unmeasured window4_fused_mlp; GPU correctness, acceptance gain and timing unknown; wait fused window result"
     }
   ]
 }

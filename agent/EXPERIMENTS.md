@@ -1151,3 +1151,49 @@ the B≤16 row mask, split and reducer. This may enable Hopper MMA v3 lowering,
 but actual PTX and GPU behavior are unobserved. Padded work, register
 pressure, compilation, correctness and speed still require an official run.
 The expanded and interleaved MLP candidates are not composed into this stage.
+
+The BM64 MLP projection candidate was accepted at actual source commit
+`438c62519e089ef2a43900dc35407b83fd9ffc50`, submission
+`a6a14688-aba7-433d-bc6d-fe1171b82d50`, official run
+`6d1f61c5-587f-4e8a-8188-07fc465b5dc4`. It was queued when recorded;
+no WGMMA lowering, correctness, or score is attributed yet. Prefill graph
+run `63c0dc6d-edb1-4cd2-b29a-bb00d0cfaeab` is measuring; interleaved
+MLP remains queued. Live source is unchanged.
+
+`wgmma_qkv_bm64` is registered unmeasured at priority 55 on the passing
+841.845837 baseline. Root reviewed that only the QKV projection row tile
+and FP32 accumulator grow from 16 to 64 rows; the fixed 48×4 grid, B row
+mask, [B,48,4,128] partial tensor, reducer and MLP are unchanged. Static
+checks passed, while actual GPU/PTX lowering, padded work, register use,
+compilation, correctness and speed are unverified. It is not live.
+
+`window4_prompt_lookup` is staged unmeasured at priority 46 on the also
+unmeasured `window4_fused_mlp` candidate, rather than directly on the
+841.845837 baseline. It uses CPU three- or four-token context lookup to
+propose three known following tokens, resets per prompt and updates history;
+full-model acceptance and cache handling are unchanged. Root's index review
+and 701 CPU oracle cases passed. GPU correctness, acceptance rate and
+latency remain unknown, so scheduling should await the fused window result.
+It is not live.
+
+## Prefill graph passed but lost ranked speed
+
+The prefill graph candidate passed official run
+`63c0dc6d-edb1-4cd2-b29a-bb00d0cfaeab` at source commit
+`70daf66e04b62a7b12ec3a3cc28fd6ce28046006`, scoring 822.996067
+tokens/s. This is 2.24% below the passing 841.845837 baseline. Public
+batch-1 TTFT improved from 15.026 to 13.032 ms, but public TPOT was
+4.261/5.182/5.294 ms versus baseline 4.227/5.043/5.168 ms, all slightly
+slower. Correctness passed; promotion is rejected for lower ranked speed.
+The full report remains saved. Live BM64 MLP source is unchanged.
+
+## Window4 plus passing MLP fusion live
+
+The live engine is now exactly the reviewed `window4_fused_mlp` stage.
+The window-specific Q/K and grouped attention kernels are bytewise the
+passing 769.249724 window4 prototype; its cache and acceptance loop remain
+unchanged. The MLP split kernel is bytewise the passing 841.845837 source.
+The B1 window forward composes that MLP and residual fusion across four
+token rows, while B>1 follows the ordinary passing path. This composition
+has no official correctness or speed result. Prompt lookup remains staged
+pending this result; interleaved and BM64 submissions remain pending.
