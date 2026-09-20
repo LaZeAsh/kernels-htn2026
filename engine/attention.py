@@ -6,6 +6,7 @@ from kernels.decode_fusion import qk_norm_rope_cache, prefill_qk_norm_rope_cache
 from kernels.qkv_split import project_norm_rope_cache
 from kernels.mlp_split import split_swiglu
 from kernels.mlp_b1_gemv import b1_gemv_swiglu
+from kernels.mlp_b2_4_gemv import b2_4_gemv_swiglu
 from transformers.models.qwen3.modeling_qwen3 import (
     ALL_ATTENTION_FUNCTIONS,
     apply_rotary_pos_emb,
@@ -106,6 +107,8 @@ def install_direct_gqa(layer):
 def _mlp_forward(self, x):
     if self.decode_mode and x.shape[0] == 1:
         product = b1_gemv_swiglu(x, self.gate_proj.weight, self.up_proj.weight)
+    elif self.decode_mode and 2 <= x.shape[0] <= 4:
+        product = b2_4_gemv_swiglu(x, self.gate_proj.weight, self.up_proj.weight)
     elif self.decode_mode and x.shape[0] <= 16:
         product = split_swiglu(x, self.gate_proj.weight, self.up_proj.weight)
     else:

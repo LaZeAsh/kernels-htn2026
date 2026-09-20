@@ -1414,3 +1414,11 @@ isolated official test. Compile and package checks passed (12 source files,
 11,142 archive bytes); GPU correctness and performance remain unmeasured.
 The reviewed `b2_4_fused_mlp_gemv` stage is registered next at priority 35,
 with no local Triton compile or official result.
+
+The B1 down GEMV candidate was accepted from actual commit
+`46150c4526c98e139fc8d0d131a2d4b47a37c262`, submission
+`bea581ee-c895-40b5-ad8a-b20c65f28eab`, run
+`95ef921d-a16d-4f0a-bf37-741b6b47eabb`, queued when recorded.
+The reviewed B2..4 fused MLP GEMV stage is now live. Static compilation,
+staged source comparison and packaging passed (12 imported files, 10,972
+archive bytes). GPU correctness and speed remain unmeasured.
