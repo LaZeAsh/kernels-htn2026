@@ -1,7 +1,6 @@
 """Native projections with fused prefill and direct full-context GQA decode."""
 
 import types
-import torch
 
 from kernels.decode_fusion import qk_norm_rope_cache, prefill_qk_norm_rope_cache, swiglu
 from kernels.qkv_split import project_norm_rope_cache
@@ -100,16 +99,12 @@ def install_direct_gqa(layer):
     attention.forward = types.MethodType(_attention_forward, attention)
     mlp = layer.mlp
     mlp.decode_mode = False
-    with torch.no_grad():
-        mlp.interleaved_weight = torch.stack(
-            (mlp.gate_proj.weight, mlp.up_proj.weight), dim=1,
-        ).reshape(19456, 2560).contiguous()
     mlp.forward = types.MethodType(_mlp_forward, mlp)
 
 
 def _mlp_forward(self, x):
     if self.decode_mode and x.shape[0] <= 16:
-        product = split_swiglu(x, self.interleaved_weight)
+        product = split_swiglu(x, self.gate_proj.weight, self.up_proj.weight)
     else:
         gate = self.gate_proj(x)
         up = self.up_proj(x)

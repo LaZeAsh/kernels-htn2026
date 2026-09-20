@@ -455,13 +455,17 @@
     {
       "id": "v42_expanded_mlp_autotune",
       "path": "agent/candidates/expanded_mlp_autotune",
-      "disposition": "queued",
+      "disposition": "rejected",
       "priority": 50,
       "reason": "Expand passing 841.845837 MLP autotune from four to eight fixed configurations: add BN128 BK64/128 with warps8 stages2 or warps4 stages3.",
       "numericalRisk": "extra Triton compilation and tuning may exceed load plus warmup budget; GPU correctness/speed unmeasured",
       "commitSha": "fbbacd674873afe59d2d139c7a06def82a726903",
       "submissionId": "77bbaec3-c5e9-4377-abc1-936755632a96",
-      "runId": "3a9ce769-acb8-4126-91d5-2cd3d478a128"
+      "runId": "3a9ce769-acb8-4126-91d5-2cd3d478a128",
+      "resultStatus": "passed",
+      "ranked": true,
+      "scoreTokensPerSecond": 835.7256164755116,
+      "rejectionReason": "Correctness passed, but ranked score 0.73% below 841.845837 four-config baseline; no promotion gain."
     },
     {
       "id": "v43_qkv_warps8_autotuned_mlp",
@@ -473,19 +477,38 @@
     },
     {
       "id": "v44_graphed_prefill_autotuned_mlp",
-      "path": "engine",
-      "disposition": "active",
+      "path": "agent/candidates/graphed_prefill_autotuned_mlp",
+      "disposition": "queued",
       "priority": 20,
       "reason": "Capture prefill on passing 841.845837 autotuned MLP baseline with unchanged prefill math and fresh prompt copy.",
-      "numericalRisk": "separate graph memory pool may raise peak memory; extra first warmup work and hidden timing unmeasured"
+      "numericalRisk": "separate graph memory pool may raise peak memory; extra first warmup work and hidden timing unmeasured",
+      "commitSha": "70daf66e04b62a7b12ec3a3cc28fd6ce28046006",
+      "submissionId": "8b3835e9-481a-4014-97a1-2ac972dee9eb",
+      "runId": "63c0dc6d-edb1-4cd2-b29a-bb00d0cfaeab"
     },
     {
       "id": "v45_interleaved_mlp_autotuned",
-      "path": "agent/candidates/interleaved_mlp_autotuned",
-      "disposition": "unmeasured",
+      "path": "engine",
+      "disposition": "active",
       "priority": 30,
       "reason": "Interleaved gate/up MLP on passing 841.845837 autotuned baseline; reviewed exact 19456 physical columns and even/odd reducer BF16 boundaries.",
       "numericalRisk": "~3.34 GiB extra weight copy and widened MMA resource/initialization costs; hidden correctness and speed unmeasured"
+    },
+    {
+      "id": "v46_native_down_column_major",
+      "path": "agent/candidates/native_down_column_major",
+      "disposition": "unmeasured",
+      "priority": 70,
+      "reason": "Untimed down_proj.weight.data transpose-contiguous-transpose layout on passing 841.845837 baseline; logical BF16 values and Parameter identity retained, strides (1,2560).",
+      "numericalRisk": "native prefill and decode down GEMM kernel choice/numerics unmeasured; transient layout copy during init"
+    },
+    {
+      "id": "v47_wgmma_mlp_bm64",
+      "path": "agent/candidates/wgmma_mlp_bm64",
+      "disposition": "unmeasured",
+      "priority": 35,
+      "reason": "MLP projection BM16 to BM64 on passing 841.845837 base, retaining B<=16 row mask and split/reducer; may enable WGMMA with eligible pinned Triton v3 shapes.",
+      "numericalRisk": "actual PTX path unobserved; padded FLOPs, registers, compile and hidden speed/correctness unmeasured"
     }
   ]
 }

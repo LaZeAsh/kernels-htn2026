@@ -1066,3 +1066,50 @@ The first warmup still runs the original prefill before capture, and later
 samples replay the graph after copying each fresh prompt. Peak memory and
 warmup budget, along with official correctness and speed, remain unmeasured.
 The down projection plus norm result remains archived at 828.899235.
+
+The prefill graph candidate was accepted at actual source commit
+`70daf66e04b62a7b12ec3a3cc28fd6ce28046006`, submission
+`8b3835e9-481a-4014-97a1-2ac972dee9eb`, official run
+`63c0dc6d-edb1-4cd2-b29a-bb00d0cfaeab`. It was queued when recorded;
+no result is attributed yet. Expanded MLP run
+`3a9ce769-acb8-4126-91d5-2cd3d478a128` is measuring; the LM head retry
+`2addd03d-40d8-499c-b3ab-3ac92b23df91` remains queued. Live source is
+unchanged.
+
+`native_down_column_major` is registered unmeasured at priority 70 on the
+passing 841.845837 baseline. Root reviewed that only an untimed
+`down_proj.weight.data` transpose, contiguous copy and transpose changes the
+physical layout; logical BF16 values and Parameter identity remain, with
+strides (1, 2560). It can change native prefill and decode down GEMM kernel
+choice and numerical order. The transient copy is not retained; GPU
+correctness, speed and load impact remain unmeasured. It is not live.
+
+`wgmma_mlp_bm64` is staged unmeasured at priority 35 on the passing
+841.845837 source. Its reviewed MLP projection changes the M tile from 16
+to 64 while retaining B≤16 row masks and the split/reducer. Pinned Triton
+source indicates WGMMA eligibility for the resulting BF16 dimensions and
+four warps, but no GPU compilation or PTX inspection has confirmed the
+chosen instruction path. Padded FLOPs, registers, compilation and runtime
+remain risks. It is not live.
+
+## Expanded MLP autotune passed but did not improve rank
+
+The eight-configuration MLP autotune candidate passed official run
+`3a9ce769-acb8-4126-91d5-2cd3d478a128` at source commit
+`fbbacd674873afe59d2d139c7a06def82a726903`, scoring 835.725616
+tokens/s. That is 0.73% below the passing four-configuration baseline at
+841.845837. Public TPOT changed from 4.227/5.043/5.168 ms to
+4.206/5.039/5.307 ms. Correctness passed, but promotion is rejected for
+lack of ranked speed gain. The full report is saved; live engine source is
+unchanged. The LM head retry and prefill graph runs remain pending.
+
+## Interleaved MLP live
+
+The live engine is now exactly the reviewed `interleaved_mlp_autotuned` stage
+on the passing 841.845837 tokens/s baseline. It copies gate/up BF16 weights
+into an interleaved decode layout during initialization and uses the staged
+interleaved split SwiGLU kernel for batches up to 16. The native weights
+remain for prefill and larger batches. Extra persistent memory is about
+3.34 GiB; official correctness, memory, initialization budget and speed
+remain unmeasured. The withdrawn expanded autotune, native down layout and
+WGMMA tile stages are not composed into this engine.

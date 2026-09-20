@@ -99,17 +99,18 @@ def install_direct_gqa(layer):
     attention = layer.self_attn
     attention.forward = types.MethodType(_attention_forward, attention)
     mlp = layer.mlp
-    mlp.decode_mode = False
     with torch.no_grad():
-        mlp.interleaved_weight = torch.stack(
-            (mlp.gate_proj.weight, mlp.up_proj.weight), dim=1,
-        ).reshape(19456, 2560).contiguous()
+        weight = mlp.down_proj.weight
+        # [2560,9728] values and Parameter identity stay unchanged;
+        # storage becomes column major with logical strides (1,2560).
+        weight.data = weight.data.t().contiguous().t()
+    mlp.decode_mode = False
     mlp.forward = types.MethodType(_mlp_forward, mlp)
 
 
 def _mlp_forward(self, x):
     if self.decode_mode and x.shape[0] <= 16:
-        product = split_swiglu(x, self.interleaved_weight)
+        product = split_swiglu(x, self.gate_proj.weight, self.up_proj.weight)
     else:
         gate = self.gate_proj(x)
         up = self.up_proj(x)
