@@ -405,16 +405,19 @@
     },
     {
       "id": "v39_window4_jacobi_b1",
-      "path": "engine",
-      "disposition": "active",
+      "path": "agent/candidates/window4_jacobi_b1",
+      "disposition": "queued",
       "priority": 20,
       "reason": "Window-4 Jacobi batch-1 prototype on passing 776.343294 combined precise PV/QKV/cuBLASLt base; independent of current fused LM/MLP composition.",
-      "numericalRisk": "CPU oracle simulations and static source review only; GPU correctness, latency, graph behavior unmeasured"
+      "numericalRisk": "CPU oracle simulations and static source review only; GPU correctness, latency, graph behavior unmeasured",
+      "commitSha": "06833676a6e9b52b474a94f2ff2773d1a1b1beb2",
+      "submissionId": "11c84c90-493b-46c7-895a-e124e38cd889",
+      "runId": "7e2399f8-abb9-494c-a809-6d3ef6792b6f"
     },
     {
       "id": "v40_lossless_autotuned_mlp_precise_qkv_cublaslt",
-      "path": "agent/candidates/lossless_autotuned_mlp_precise_qkv_cublaslt",
-      "disposition": "unmeasured",
+      "path": "engine",
+      "disposition": "active",
       "priority": 30,
       "reason": "Lossless MLP codec on passing 841.845837 autotuned MLP precise PV/QKV/cuBLASLt source; K128 divisibility guard, exact per-weight validation of gate/up at BK64/BK128 and all 65536 BF16 bit patterns.",
       "numericalRisk": "GPU correctness, ~2.7 GB persistent memory increase, initialization budget and unpack cost unmeasured"

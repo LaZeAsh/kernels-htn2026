@@ -4,14 +4,14 @@ import types
 
 from kernels.decode_fusion import qk_norm_rope_cache, prefill_qk_norm_rope_cache, swiglu
 from kernels.qkv_split import project_norm_rope_cache
+from kernels.mlp_split import split_swiglu
+from kernels.lossless_codec import encode_validate
 from transformers.models.qwen3.modeling_qwen3 import (
     ALL_ATTENTION_FUNCTIONS,
     apply_rotary_pos_emb,
 )
 
 from kernels.grouped_tc import grouped_tc_decode
-from kernels.grouped_tc_window import grouped_tc_window
-from kernels.window_qk import window_qk_cache
 
 
 def _attention_forward(
@@ -21,25 +21,7 @@ def _attention_forward(
     input_shape = hidden_states.shape[:-1]
     hidden_shape = (*input_shape, -1, self.head_dim)
     cos, sin = position_embeddings
-    if (input_shape == (1, 4) and past_key_value is not None
-            and past_key_value.window_mode):
-        q = self.q_proj(hidden_states)
-        k = self.k_proj(hidden_states)
-        v = self.v_proj(hidden_states)
-        query_states = window_qk_cache(
-            q, k, v, self.q_norm.weight, self.k_norm.weight,
-            cos, sin, cache_position[:1],
-            past_key_value.keys[self.layer_idx],
-            past_key_value.values[self.layer_idx],
-            self.q_norm.variance_epsilon, self.k_norm.variance_epsilon,
-        )
-        attn_output = grouped_tc_window(
-            query_states, past_key_value.keys[self.layer_idx],
-            past_key_value.values[self.layer_idx], cache_position[:1],
-            self.scaling, past_key_value.prefill_length,
-        ).transpose(1, 2).contiguous()
-        attn_weights = None
-    elif (input_shape[-1] == 1 and past_key_value is not None
+    if (input_shape[-1] == 1 and past_key_value is not None
             and not past_key_value.prefill_mode):
         if hidden_states.shape[0] <= 16:
             query_states = project_norm_rope_cache(
@@ -118,11 +100,19 @@ def install_direct_gqa(layer):
     attention.forward = types.MethodType(_attention_forward, attention)
     mlp = layer.mlp
     mlp.decode_mode = False
+    mlp.gate_codec = encode_validate(mlp.gate_proj.weight)
+    mlp.up_codec = encode_validate(mlp.up_proj.weight)
     mlp.forward = types.MethodType(_mlp_forward, mlp)
 
 
 def _mlp_forward(self, x):
-    gate = self.gate_proj(x)
-    up = self.up_proj(x)
-    product = swiglu(gate, up)
+    if self.decode_mode and x.shape[0] <= 16:
+        product = split_swiglu(
+            x, self.gate_proj.weight, self.up_proj.weight,
+            self.gate_codec, self.up_codec,
+        )
+    else:
+        gate = self.gate_proj(x)
+        up = self.up_proj(x)
+        product = swiglu(gate, up)
     return self.down_proj(product)

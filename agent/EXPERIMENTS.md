@@ -920,3 +920,17 @@ exact checks for gate/up weights at BK64 and BK128 and for all 65,536 BF16 bit
 patterns, but these do not substitute for an official GPU run. Persistent
 memory rises by about 2.7 GB, and initialization and unpacking may hurt the
 load budget and runtime. It is not part of the live window4 engine.
+
+## Window4 queued; lossless MLP live
+
+The window4 Jacobi batch-1 candidate was accepted from actual source commit
+`06833676a6e9b52b474a94f2ff2773d1a1b1beb2`, submission
+`11c84c90-493b-46c7-895a-e124e38cd889`, official run
+`7e2399f8-abb9-494c-a809-6d3ef6792b6f`. It was queued when recorded;
+no GPU correctness or score is attributed yet.
+
+The live engine is now exactly the reviewed
+`lossless_autotuned_mlp_precise_qkv_cublaslt` stage on the passing
+841.845837 tokens/s baseline. Window-only kernels were removed from the
+submission package. GPU correctness, memory, initialization budget and
+performance remain unmeasured for this candidate.
