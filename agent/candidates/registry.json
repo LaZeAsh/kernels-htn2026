@@ -516,26 +516,33 @@
     {
       "id": "v47_wgmma_mlp_bm64",
       "path": "agent/candidates/wgmma_mlp_bm64",
-      "disposition": "queued",
+      "disposition": "rejected",
       "priority": 35,
       "reason": "MLP projection BM16 to BM64 on passing 841.845837 base, retaining B<=16 row mask and split/reducer; may enable WGMMA with eligible pinned Triton v3 shapes.",
       "numericalRisk": "actual PTX path unobserved; padded FLOPs, registers, compile and hidden speed/correctness unmeasured",
       "commitSha": "438c62519e089ef2a43900dc35407b83fd9ffc50",
       "submissionId": "a6a14688-aba7-433d-bc6d-fe1171b82d50",
-      "runId": "6d1f61c5-587f-4e8a-8188-07fc465b5dc4"
+      "runId": "6d1f61c5-587f-4e8a-8188-07fc465b5dc4",
+      "resultStatus": "passed",
+      "ranked": true,
+      "scoreTokensPerSecond": 806.6134389438276,
+      "rejectionReason": "Correctness passed but 4.19% below 841.845837 baseline; all public TPOT slower."
     },
     {
       "id": "v48_window4_fused_mlp",
-      "path": "engine",
-      "disposition": "active",
+      "path": "agent/candidates/window4_fused_mlp",
+      "disposition": "queued",
       "priority": 45,
       "reason": "Window4 acceptance/cache with passing 841.845837 MLP/residual fusion; batch1 flattens GEMM/norm token rows four while attention/cache retain B1T4; B>1 follows ordinary passing path.",
-      "numericalRisk": "combination hidden numerical correctness and timing unmeasured; prior window4 alone was correct but slower"
+      "numericalRisk": "combination hidden numerical correctness and timing unmeasured; prior window4 alone was correct but slower",
+      "commitSha": "54c8d65fda0ae25f17fc3fa43bb54c710abda6b1",
+      "submissionId": "09e5a47d-ee7c-4a53-8713-81d3d7b2d634",
+      "runId": "75e03b21-7e55-42d7-bd27-8c3f7ad4014a"
     },
     {
       "id": "v49_wgmma_qkv_bm64",
-      "path": "agent/candidates/wgmma_qkv_bm64",
-      "disposition": "unmeasured",
+      "path": "engine",
+      "disposition": "active",
       "priority": 55,
       "reason": "QKV projection row tile 16 to 64 and FP32 accumulator 64x128 on passing 841.845837 baseline; fixed 48x4 grid, row mask, partial shape and reducer unchanged.",
       "numericalRisk": "GPU/PTX path, padded work, registers, compilation, hidden correctness and speed unverified"
@@ -547,6 +554,14 @@
       "priority": 46,
       "reason": "CPU 3/4-context lookup proposes three known following tokens on unmeasured window4_fused_mlp; reset per prompt and update history, full-model acceptance/cache unchanged.",
       "numericalRisk": "depends on unmeasured window4_fused_mlp; GPU correctness, acceptance gain and timing unknown; wait fused window result"
+    },
+    {
+      "id": "v51_b1_fused_mlp_gemv",
+      "path": "agent/candidates/b1_fused_mlp_gemv",
+      "disposition": "unmeasured",
+      "priority": 75,
+      "reason": "B1-only fused gate/up GEMV on passing 841.845837 baseline: original BF16 weights, full K2560 padded 4096, FP32 multiply/sum, BF16 projection/SiLU/product boundaries; B>1 winning MLP unchanged.",
+      "numericalRisk": "high CTA/register demand, reduction-order numerics and six-config autotune warmup unmeasured on GPU"
     }
   ]
 }

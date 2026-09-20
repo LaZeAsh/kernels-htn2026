@@ -5,6 +5,7 @@ import triton
 import triton.language as tl
 
 from kernels.decode_fusion import _norm_rope
+from kernels.compiler_diag import log_compiler_once
 
 
 @triton.jit
@@ -78,7 +79,8 @@ def project_norm_rope_cache(x, qw, kw, vw, qgain, kgain, cos, sin,
         raise ValueError("invalid split QKV input, weights or cache")
     partial = torch.empty((batch, 48, 4, 128), dtype=torch.float32, device=x.device)
     qout = torch.empty((batch, 32, 1, 128), dtype=x.dtype, device=x.device)
-    _project[(48, 4)](x, qw, kw, vw, partial, batch, num_warps=4)
+    compiled = _project[(48, 4)](x, qw, kw, vw, partial, batch, num_warps=4)
+    log_compiler_once("qkv_bm64_project", compiled)
     _reduce_rope[(batch, 32)](
         partial, qgain, kgain, cos, sin, position, kc, vc, qout,
         kc.shape[2], qeps, keps, num_warps=4, enable_fp_fusion=False,

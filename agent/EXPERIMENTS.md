@@ -1197,3 +1197,50 @@ The B1 window forward composes that MLP and residual fusion across four
 token rows, while B>1 follows the ordinary passing path. This composition
 has no official correctness or speed result. Prompt lookup remains staged
 pending this result; interleaved and BM64 submissions remain pending.
+
+The window4 fused MLP candidate was accepted at actual source commit
+`54c8d65fda0ae25f17fc3fa43bb54c710abda6b1`, submission
+`09e5a47d-ee7c-4a53-8713-81d3d7b2d634`, official run
+`75e03b21-7e55-42d7-bd27-8c3f7ad4014a`. It was queued when recorded;
+no correctness or speed is attributed yet. BM64 MLP run
+`6d1f61c5-587f-4e8a-8188-07fc465b5dc4` is measuring, and interleaved
+MLP remains queued. Live source is unchanged.
+
+`b1_fused_mlp_gemv` is staged unmeasured at priority 75 on the passing
+841.845837 baseline. The reviewed B1-only kernel reads original BF16
+gate/up weights over K2560 padded to 4096, sums FP32 products, then keeps
+BF16 projection, SiLU and product boundaries. It writes no FP32 partial
+tensors. Six fixed ROWS (1/2/4) by warp count (4/8) choices use two stages;
+B>1 retains the winning MLP path. Root checked mask and grid indexing and
+static syntax, but high CTA/register work, reduction numerics, tuning warmup
+and speed need GPU evidence. It is not live.
+
+The unsubmitted `wgmma_qkv_bm64` and `b1_fused_mlp_gemv` stages now include
+a reviewed, once-per-process warmup compiler diagnostic. It records register,
+spill and shared-memory counts plus whether WGMMA appears; GEMV also records
+its selected ROWS and warp count. The log includes no inputs or workload
+shapes, and later calls do not repeat PTX parsing or printing. Kernel math
+and tuning choices are unchanged. Neither stage is live or measured.
+
+## BM64 MLP projection passed but slower
+
+The BM64 MLP candidate passed official run
+`6d1f61c5-587f-4e8a-8188-07fc465b5dc4` at commit
+`438c62519e089ef2a43900dc35407b83fd9ffc50`, scoring 806.613439
+tokens/s. That is 4.19% below the passing 841.845837 baseline. Public
+TPOT was 4.406, 5.210 and 5.370 ms versus baseline 4.227, 5.043 and
+5.168 ms, all slower. Correctness passed; promotion is rejected for speed.
+No PTX diagnostic was present in this already submitted stage, so the
+instruction path remains unconfirmed. The report is saved; live window4
+fused MLP source is unchanged.
+
+## QKV BM64 compiler probe live
+
+The live engine is now the reviewed `wgmma_qkv_bm64` stage on the passing
+841.845837 baseline. Only the QKV projection M tile/accumulator grow from
+16 to 64 rows, plus a once-per-process warmup compiler diagnostic reporting
+registers, spills, shared memory and observed WGMMA presence. The MLP split
+kernel is bytewise the passing BM16 source. The fixed QKV grid, B≤16 masks,
+partial tensor and reducer remain unchanged. GPU lowering, correctness and
+speed are unmeasured; the earlier slower BM64 MLP result does not determine
+this independent QKV result. Prompt lookup remains staged and unsubmitted.
