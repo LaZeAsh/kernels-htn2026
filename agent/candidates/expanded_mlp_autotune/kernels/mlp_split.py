@@ -9,6 +9,9 @@ import triton.language as tl
     configs=[
         triton.Config({"BN": bn, "BK": bk}, num_warps=4, num_stages=2)
         for bn in (64, 128) for bk in (64, 128)
+    ] + [
+        triton.Config({"BN": 128, "BK": bk}, num_warps=warps, num_stages=stages)
+        for bk in (64, 128) for warps, stages in ((8, 2), (4, 3))
     ],
     key=["B"], warmup=10, rep=50, use_cuda_graph=False,
 )

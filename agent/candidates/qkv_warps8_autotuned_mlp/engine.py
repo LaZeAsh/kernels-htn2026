@@ -8,8 +8,6 @@ from transformers import AutoModelForCausalLM
 
 from kernels.rmsnorm import rms_norm
 from kernels.residual_norm import add_norm
-from kernels.mlp_split import split_swiglu
-from kernels.output_projection import down_project_add_norm
 from attention import install_direct_gqa
 
 
@@ -99,25 +97,15 @@ def _decode_last(model, token_ids, cache, positions):
             layer.post_attention_layernorm.weight,
             layer.post_attention_layernorm.variance_epsilon,
         )
+        mlp_output = layer.mlp(mlp_input)
         if index + 1 < len(layers):
             next_norm = layers[index + 1].input_layernorm
         else:
             next_norm = base.norm
-        if residual.shape[0] <= 16:
-            product = split_swiglu(
-                mlp_input, layer.mlp.gate_proj.weight,
-                layer.mlp.up_proj.weight,
-            )
-            residual, normalized = down_project_add_norm(
-                product, layer.mlp.down_proj.weight, after_attention,
-                next_norm.weight, next_norm.variance_epsilon,
-            )
-        else:
-            mlp_output = layer.mlp(mlp_input)
-            residual, normalized = add_norm(
-                after_attention, mlp_output,
-                next_norm.weight, next_norm.variance_epsilon,
-            )
+        residual, normalized = add_norm(
+            after_attention, mlp_output,
+            next_norm.weight, next_norm.variance_epsilon,
+        )
     return model.lm_head(normalized).argmax(-1)
 
 

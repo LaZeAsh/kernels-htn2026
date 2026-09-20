@@ -934,3 +934,45 @@ The live engine is now exactly the reviewed
 841.845837 tokens/s baseline. Window-only kernels were removed from the
 submission package. GPU correctness, memory, initialization budget and
 performance remain unmeasured for this candidate.
+
+## Lossless queued; down projection plus norm staged
+
+The lossless autotuned MLP candidate was accepted at actual source commit
+`20ce66e24444e2eff2df9999d6f2081846b791b3`, submission
+`a5e76cd5-8f09-49ce-9c92-1fd257680080`, official run
+`bb6abfd7-eebc-4c88-8c0b-75f7125f54db`. It was queued when recorded;
+no correctness, memory, load-budget or score result is attributed yet.
+
+`output_down_norm_autotuned_mlp_cublaslt` is registered unmeasured at priority
+40 on the passing 841.845837 source. The reviewed composition preserves
+the winning split SwiGLU kernel and changes the down projection plus norm.
+It takes two kernel launches and writes a partial tensor, so no launch-count
+or memory-traffic win is assumed. Live engine source is unchanged.
+
+`expanded_mlp_autotune` is registered unmeasured at priority 50. Root reviewed
+that its only change from the passing 841.845837 source expands the fixed
+MLP autotune list from four to eight configurations, adding BN128/BK64 or
+BK128 with eight warps and two stages or four warps and three stages.
+Compilation and tuning may consume the load plus warmup budget; no GPU
+result is attributed. The live engine remains unchanged.
+
+`qkv_warps8_autotuned_mlp` is registered unmeasured at priority 60 on the
+passing 841.845837 source. Root reviewed the sole source change: QKV
+projection launch warps rise from four to eight, with the fixed 48×4 grid
+and reducer unchanged. Static checks passed; GPU register pressure,
+correctness and speed remain unmeasured. It is not live.
+
+## Window4 correct but slower; down projection plus norm live
+
+Window4 Jacobi passed official run `7e2399f8-abb9-494c-a809-6d3ef6792b6f`
+at commit `06833676a6e9b52b474a94f2ff2773d1a1b1beb2`, scoring 769.249724
+tokens/s. This is about 0.91% below its 776.343294 baseline. Public batch-1
+TPOT was 5.19698 versus 4.70135 ms, about 10.54% slower. Correctness
+passed, but the candidate is rejected for promotion on performance.
+
+The live engine is now `output_down_norm_autotuned_mlp_cublaslt`, based on
+the passing 841.845837 autotuned MLP source. It preserves the winning split
+SwiGLU kernel and changes decode down projection plus norm; the reviewed
+path uses two kernel launches and partial tensor traffic. Its official
+correctness and speed remain unmeasured. The lossless source is archived,
+with its run still queued. The LM head run remains under automatic retry.

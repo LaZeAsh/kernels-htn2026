@@ -406,21 +406,52 @@
     {
       "id": "v39_window4_jacobi_b1",
       "path": "agent/candidates/window4_jacobi_b1",
-      "disposition": "queued",
+      "disposition": "rejected",
       "priority": 20,
       "reason": "Window-4 Jacobi batch-1 prototype on passing 776.343294 combined precise PV/QKV/cuBLASLt base; independent of current fused LM/MLP composition.",
       "numericalRisk": "CPU oracle simulations and static source review only; GPU correctness, latency, graph behavior unmeasured",
       "commitSha": "06833676a6e9b52b474a94f2ff2773d1a1b1beb2",
       "submissionId": "11c84c90-493b-46c7-895a-e124e38cd889",
-      "runId": "7e2399f8-abb9-494c-a809-6d3ef6792b6f"
+      "runId": "7e2399f8-abb9-494c-a809-6d3ef6792b6f",
+      "resultStatus": "passed",
+      "ranked": true,
+      "scoreTokensPerSecond": 769.2497244652067,
+      "rejectionReason": "Official correctness passed but score below 776.343294 baseline; public B1 TPOT 10.54% slower."
     },
     {
       "id": "v40_lossless_autotuned_mlp_precise_qkv_cublaslt",
-      "path": "engine",
-      "disposition": "active",
+      "path": "agent/candidates/lossless_autotuned_mlp_precise_qkv_cublaslt",
+      "disposition": "queued",
       "priority": 30,
       "reason": "Lossless MLP codec on passing 841.845837 autotuned MLP precise PV/QKV/cuBLASLt source; K128 divisibility guard, exact per-weight validation of gate/up at BK64/BK128 and all 65536 BF16 bit patterns.",
-      "numericalRisk": "GPU correctness, ~2.7 GB persistent memory increase, initialization budget and unpack cost unmeasured"
+      "numericalRisk": "GPU correctness, ~2.7 GB persistent memory increase, initialization budget and unpack cost unmeasured",
+      "commitSha": "20ce66e24444e2eff2df9999d6f2081846b791b3",
+      "submissionId": "a5e76cd5-8f09-49ce-9c92-1fd257680080",
+      "runId": "bb6abfd7-eebc-4c88-8c0b-75f7125f54db"
+    },
+    {
+      "id": "v41_output_down_norm_autotuned_mlp_cublaslt",
+      "path": "engine",
+      "disposition": "active",
+      "priority": 40,
+      "reason": "Custom down projection plus norm composed with passing 841.845837 autotuned split SwiGLU/cuBLASLt; winning MLP source preserved.",
+      "numericalRisk": "two kernel launches plus partial tensor traffic; hidden correctness and speed unmeasured"
+    },
+    {
+      "id": "v42_expanded_mlp_autotune",
+      "path": "agent/candidates/expanded_mlp_autotune",
+      "disposition": "unmeasured",
+      "priority": 50,
+      "reason": "Expand passing 841.845837 MLP autotune from four to eight fixed configurations: add BN128 BK64/128 with warps8 stages2 or warps4 stages3.",
+      "numericalRisk": "extra Triton compilation and tuning may exceed load plus warmup budget; GPU correctness/speed unmeasured"
+    },
+    {
+      "id": "v43_qkv_warps8_autotuned_mlp",
+      "path": "agent/candidates/qkv_warps8_autotuned_mlp",
+      "disposition": "unmeasured",
+      "priority": 60,
+      "reason": "One-line QKV projection launch num_warps 4 to 8 on passing 841.845837 autotuned MLP baseline; fixed 48x4 grid and reducer unchanged.",
+      "numericalRisk": "Triton register pressure, performance and hidden correctness unmeasured"
     }
   ]
 }
