@@ -894,3 +894,29 @@ The separately reviewed `window4_jacobi_b1` prototype is registered
 unmeasured at priority 20 on the passing 776.343294 combined baseline. Its
 review included 100 CPU oracle simulations and static source inspection, not
 GPU execution. It is not part of the live fused LM head engine.
+
+## Window4 Jacobi live, LM head ingestion pending
+
+The fused LM head on passing autotuned MLP source was committed as
+`aa1570211116bd2a3adfdea71316218d59a4cb4c`. A connected-repository
+submission and run ID were not confirmed when this note was written; the
+registry marks it awaiting ingestion rather than assigning a result.
+
+The live engine is now exactly the staged `window4_jacobi_b1` source on the
+passing 776.343294 baseline, for a separate official experiment. The LM
+head and autotuned MLP source remain archived under `agent/candidates/`.
+Window4 correctness and performance are unmeasured on GPU.
+
+The LM head commit was subsequently ingested as submission
+`b2a4cc8a-3eeb-468a-a822-65387947e184`, official run
+`c4538097-758c-4a8a-9a7a-0d7ebbf1293f`, from actual source commit
+`aa1570211116bd2a3adfdea71316218d59a4cb4c`. The run was validating
+when recorded; no result is attributed yet.
+
+`lossless_autotuned_mlp_precise_qkv_cublaslt` is separately staged at
+priority 30 on the passing 841.845837 autotuned MLP baseline. Root and Luna
+reviewed the source; the K128 divisibility guard is present. Its codec has
+exact checks for gate/up weights at BK64 and BK128 and for all 65,536 BF16 bit
+patterns, but these do not substitute for an official GPU run. Persistent
+memory rises by about 2.7 GB, and initialization and unpacking may hurt the
+load budget and runtime. It is not part of the live window4 engine.

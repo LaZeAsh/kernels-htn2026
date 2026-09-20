@@ -208,11 +208,14 @@
     },
     {
       "id": "v38_fused_lm_head_autotuned_mlp",
-      "path": "engine",
-      "disposition": "active",
+      "path": "agent/candidates/fused_lm_head_autotuned_mlp",
+      "disposition": "validating",
       "priority": 5,
       "reason": "Only fused full-vocabulary LM head helper/import/decode dispatch added to passing 841.845837 autotuned MLP; MLP kernel bytewise unchanged.",
-      "numericalRisk": "custom full-vocabulary dot/argmax hidden correctness and warmup unmeasured"
+      "numericalRisk": "custom full-vocabulary dot/argmax hidden correctness and warmup unmeasured",
+      "commitSha": "aa1570211116bd2a3adfdea71316218d59a4cb4c",
+      "submissionId": "b2a4cc8a-3eeb-468a-a822-65387947e184",
+      "runId": "c4538097-758c-4a8a-9a7a-0d7ebbf1293f"
     },
     {
       "id": "v10_combined_tc_residual",
@@ -402,11 +405,19 @@
     },
     {
       "id": "v39_window4_jacobi_b1",
-      "path": "agent/candidates/window4_jacobi_b1",
-      "disposition": "unmeasured",
+      "path": "engine",
+      "disposition": "active",
       "priority": 20,
       "reason": "Window-4 Jacobi batch-1 prototype on passing 776.343294 combined precise PV/QKV/cuBLASLt base; independent of current fused LM/MLP composition.",
       "numericalRisk": "CPU oracle simulations and static source review only; GPU correctness, latency, graph behavior unmeasured"
+    },
+    {
+      "id": "v40_lossless_autotuned_mlp_precise_qkv_cublaslt",
+      "path": "agent/candidates/lossless_autotuned_mlp_precise_qkv_cublaslt",
+      "disposition": "unmeasured",
+      "priority": 30,
+      "reason": "Lossless MLP codec on passing 841.845837 autotuned MLP precise PV/QKV/cuBLASLt source; K128 divisibility guard, exact per-weight validation of gate/up at BK64/BK128 and all 65536 BF16 bit patterns.",
+      "numericalRisk": "GPU correctness, ~2.7 GB persistent memory increase, initialization budget and unpack cost unmeasured"
     }
   ]
 }

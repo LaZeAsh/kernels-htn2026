@@ -4,6 +4,8 @@ import torch
 import triton
 import triton.language as tl
 
+from kernels.lossless_codec import _weight_block
+
 
 @triton.autotune(
     configs=[
@@ -13,7 +15,8 @@ import triton.language as tl
     key=["B"], warmup=10, rep=50, use_cuda_graph=False,
 )
 @triton.jit
-def _project(X, GW, UW, GP, UP, B: tl.constexpr,
+def _project(X, GSM, GDELTA, GBASE, GW,
+             USM, UDELTA, UBASE, UW, GP, UP, B: tl.constexpr,
              BN: tl.constexpr, BK: tl.constexpr):
     tile = tl.program_id(0)
     split = tl.program_id(1)
@@ -26,9 +29,8 @@ def _project(X, GW, UW, GP, UP, B: tl.constexpr,
         k = split * 640 + block * BK + kk
         x = tl.load(X + rows[:, None] * 2560 + k[None, :],
                     rows[:, None] < B, 0)
-        go = cols[:, None] * 2560 + k[None, :]
-        gw = tl.load(GW + go)
-        uw = tl.load(UW + go)
+        gw = _weight_block(GSM, GDELTA, GBASE, GW, cols, k, 9728, 2560, 40)
+        uw = _weight_block(USM, UDELTA, UBASE, UW, cols, k, 9728, 2560, 40)
         gate = tl.dot(x, tl.trans(gw), gate)
         up = tl.dot(x, tl.trans(uw), up)
     partial_offset = (rows[:, None] * 4 + split) * 9728 + cols[None, :]
@@ -54,7 +56,7 @@ def _reduce_swiglu(GP, UP, PRODUCT):
     tl.store(PRODUCT + b * 9728 + col, product)
 
 
-def split_swiglu(x, gate_weight, up_weight):
+def split_swiglu(x, gate_weight, up_weight, gate_codec, up_codec):
     """BF16 [B,1,2560] x separate original weights to [B,1,9728]."""
     batch = x.shape[0]
     if (batch < 1 or batch > 16 or x.shape != (batch, 1, 2560)
@@ -68,7 +70,8 @@ def split_swiglu(x, gate_weight, up_weight):
     up_partial = torch.empty_like(gate_partial)
     product = torch.empty((batch, 1, 9728), dtype=x.dtype, device=x.device)
     _project[(lambda meta: (triton.cdiv(9728, meta["BN"]), 4))](
-        x, gate_weight, up_weight, gate_partial, up_partial, batch,
+        x, *gate_codec, gate_weight, *up_codec, up_weight,
+        gate_partial, up_partial, batch,
     )
     _reduce_swiglu[(batch, 38)](
         gate_partial, up_partial, product,
