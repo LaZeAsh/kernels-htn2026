@@ -38,7 +38,7 @@ def _qk_norm_rope_write(Q, K, V, QGAIN, KGAIN, COS, SIN, POS, KC, VC, QOUT,
         v = tl.load(V + b * 1024 + h * 128 + d)
         k_gain = tl.load(KGAIN + d)
         k_rot = _norm_rope(k, k_gain, cos, sin, KEPS)
-        offset = ((b * CAPACITY + position) * 8 + h) * 128 + d
+        offset = ((b * 8 + h) * CAPACITY + position) * 128 + d
         tl.store(KC + offset, k_rot)
         tl.store(VC + offset, v)
 
@@ -66,7 +66,7 @@ def _prefill_qk_norm_rope_write(Q, K, V, QGAIN, KGAIN, COS, SIN,
         v = tl.load(V + (b * LENGTH + token) * 1024 + h * 128 + d)
         k_gain = tl.load(KGAIN + d)
         k_rot = _norm_rope(k, k_gain, cos, sin, KEPS)
-        cache_offset = ((b * CAPACITY + token) * 8 + h) * 128 + d
+        cache_offset = ((b * 8 + h) * CAPACITY + token) * 128 + d
         tl.store(KC + cache_offset, k_rot)
         tl.store(VC + cache_offset, v)
 
@@ -88,7 +88,7 @@ def qk_norm_rope_cache(q, k, v, q_gain, k_gain, cos, sin, position,
                        k_cache, v_cache, q_eps, k_eps):
     """Consume separate native BF16 projections, return Q [B,32,1,128].
 
-    Writes K/V at the device scalar position in time-major fixed cache.
+    Writes K/V at the device scalar position in contiguous fixed cache.
     Every native BF16 normalization and RoPE rounding boundary is retained.
     """
     batch = q.shape[0]
@@ -98,9 +98,8 @@ def qk_norm_rope_cache(q, k, v, q_gain, k_gain, cos, sin, position,
             raise ValueError("Q/K/V must be separate contiguous BF16 native projections")
     if (k_cache.shape != (batch, 8, capacity, 128)
             or v_cache.shape != k_cache.shape
-            or k_cache.stride() != (capacity * 8 * 128, 128, 8 * 128, 1)
-            or v_cache.stride() != k_cache.stride()):
-        raise ValueError("K/V cache must be time-major [B,8,C,128] views")
+            or not k_cache.is_contiguous() or not v_cache.is_contiguous()):
+        raise ValueError("K/V cache must be contiguous [B,8,C,128]")
     if q_gain.shape != (128,) or k_gain.shape != (128,):
         raise ValueError("Q/K norm gains must have 128 elements")
     if cos.shape[-1] != 128 or sin.shape[-1] != 128 or not cos.is_contiguous() or not sin.is_contiguous():
@@ -120,7 +119,7 @@ def prefill_qk_norm_rope_cache(q, k, v, q_gain, k_gain, cos, sin,
     """Normalize/rotate native BF16 projections, write cache, return Q.
 
     Q/K/V are contiguous [B,T,4096/1024]. Cos/sin are contiguous
-    [1 or B,T,128]. Cache is time-major [B,8,C,128], with C >= T. Only the
+    [1 or B,T,128]. Cache is contiguous [B,8,C,128], with C >= T. Only the
     initialized prefix [:T] may be exposed to causal SDPA.
     """
     batch, length, width = q.shape
@@ -135,8 +134,7 @@ def prefill_qk_norm_rope_cache(q, k, v, q_gain, k_gain, cos, sin,
             or not cos.is_contiguous() or not sin.is_contiguous()
             or k_cache.shape != (batch, 8, capacity, 128)
             or v_cache.shape != k_cache.shape
-            or k_cache.stride() != (capacity * 8 * 128, 128, 8 * 128, 1)
-            or v_cache.stride() != k_cache.stride()
+            or not k_cache.is_contiguous() or not v_cache.is_contiguous()
             or q_gain.shape != (128,) or k_gain.shape != (128,)):
         raise ValueError("invalid prefill Q/K/V, RoPE, gain or cache layout")
     out = torch.empty((batch, 32, length, 128), device=q.device, dtype=q.dtype)

@@ -56,7 +56,7 @@ def _reduce_rope(PART, QGAIN, KGAIN, COS, SIN, POS, KC, VC, QOUT,
              + tl.load(PART + vb + 256) + tl.load(PART + vb + 384)).to(tl.bfloat16)
         krot = _norm_rope(k, tl.load(KGAIN + d), cos, sin, KEPS)
         position = tl.load(POS)
-        cache_offset = ((b * CAPACITY + position) * 8 + h) * 128 + d
+        cache_offset = ((b * 8 + h) * CAPACITY + position) * 128 + d
         tl.store(KC + cache_offset, krot)
         tl.store(VC + cache_offset, v)
 
@@ -72,9 +72,8 @@ def project_norm_rope_cache(x, qw, kw, vw, qgain, kgain, cos, sin,
             or not qw.is_contiguous() or not kw.is_contiguous()
             or not vw.is_contiguous()
             or kc.shape != vc.shape or kc.shape[:2] != (batch, 8)
-            or kc.shape[-1] != 128
-            or kc.stride() != (kc.shape[2] * 8 * 128, 128, 8 * 128, 1)
-            or vc.stride() != kc.stride()):
+            or kc.shape[-1] != 128 or not kc.is_contiguous()
+            or not vc.is_contiguous()):
         raise ValueError("invalid split QKV input, weights or cache")
     partial = torch.empty((batch, 48, 4, 128), dtype=torch.float32, device=x.device)
     qout = torch.empty((batch, 32, 1, 128), dtype=x.dtype, device=x.device)

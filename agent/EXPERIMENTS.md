@@ -1422,3 +1422,30 @@ The B1 down GEMV candidate was accepted from actual commit
 The reviewed B2..4 fused MLP GEMV stage is now live. Static compilation,
 staged source comparison and packaging passed (12 imported files, 10,972
 archive bytes). GPU correctness and speed remain unmeasured.
+
+Prefill cuBLASLt run `83e9f201-f5d7-4e88-9897-fa3a5b43ec07` passed
+correctness and ranked 840.2841771253366 tok/s, below the 854.042926
+B1 GEMV baseline. It is rejected for promotion. The report is saved in
+`agent/runs/83e9f201-f5d7-4e88-9897-fa3a5b43ec07.json`.
+
+B2..4 fused MLP GEMV was accepted from commit
+`5d7635998676408225090a4592d143df1241604a` as submission
+`cf8c7b3a-abf8-45d4-aac3-a7313e334a01`, run
+`cbd1e1a3-e5d5-4545-ab17-5b9c9ce86f7e`, queued when recorded.
+The last-token prefill run is measuring; add-norm and down GEMV remain
+queued. No new engine candidate was promoted while these runs are pending.
+
+Last-token MLP prefill run `adc369ae-bb29-4265-8e1d-7fd9a155267e`
+passed correctness and ranked 848.1621694586071 tok/s, below the
+854.042926 B1 GEMV baseline. It is rejected for promotion; its report is
+saved in `agent/runs/adc369ae-bb29-4265-8e1d-7fd9a155267e.json`.
+Its public TTFT improved 11.3%, 3.0%, and 1.8% versus the 854.042926
+B1 GEMV baseline, so the correct prefill change remains useful for a later
+combination despite its 0.69% lower ranked score.
+
+The root-reviewed `flash_varlen_decode_b1_gemv` is live for an isolated
+official run. Its time-major KV cache avoids an extra KV copy. Static compile,
+source comparison and packaging passed (11 imported files, 9,935 archive
+bytes); GPU correctness and timing are unknown. The reviewed
+`prefill_packed_gate_up_b1_gemv` and corrected `last_query_prefill_b1_gemv`
+remain staged at priorities 37 and 38.

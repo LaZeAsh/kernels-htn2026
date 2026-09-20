@@ -11,7 +11,7 @@ from transformers.models.qwen3.modeling_qwen3 import (
     apply_rotary_pos_emb,
 )
 
-from kernels.flash_varlen import flash_varlen_decode
+from kernels.grouped_tc import grouped_tc_decode
 
 
 def _attention_forward(
@@ -43,8 +43,10 @@ def _attention_forward(
                 past_key_value.values[self.layer_idx],
                 self.q_norm.variance_epsilon, self.k_norm.variance_epsilon,
             )
-        attn_output = flash_varlen_decode(
-            query_states, past_key_value, self.layer_idx, self.scaling,
+        attn_output = grouped_tc_decode(
+            query_states, past_key_value.keys[self.layer_idx],
+            past_key_value.values[self.layer_idx], cache_position, self.scaling,
+            past_key_value.prefill_length,
         )
         attn_weights = None
     elif past_key_value is not None and past_key_value.prefill_mode:

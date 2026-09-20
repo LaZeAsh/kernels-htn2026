@@ -8,7 +8,6 @@ from transformers import AutoModelForCausalLM
 
 from kernels.rmsnorm import rms_norm
 from kernels.residual_norm import add_norm
-from kernels.flash_varlen import set_used_k
 from attention import install_direct_gqa
 
 
@@ -32,17 +31,10 @@ class FixedCache:
 
     def __init__(self, layers, batch, heads, capacity, head_dim):
         self.capacity = capacity
-        # One physical [B,C,8,128] allocation per K/V layer. The logical
-        # [B,8,C,128] views retain the native prefill adapter interface.
-        self.keys_packed = [torch.zeros((batch, capacity, heads, head_dim),
-                                        device="cuda:0", dtype=torch.bfloat16)
-                            for _ in range(layers)]
-        self.values_packed = [torch.zeros_like(k) for k in self.keys_packed]
-        self.keys = [k.permute(0, 2, 1, 3) for k in self.keys_packed]
-        self.values = [v.permute(0, 2, 1, 3) for v in self.values_packed]
-        self.cu_q = torch.arange(batch + 1, device="cuda:0", dtype=torch.int32)
-        self.cu_k = self.cu_q * capacity
-        self.used_k = torch.empty((batch,), device="cuda:0", dtype=torch.int32)
+        self.keys = [torch.zeros((batch, heads, capacity, head_dim),
+                                 device="cuda:0", dtype=torch.bfloat16)
+                     for _ in range(layers)]
+        self.values = [torch.zeros_like(k) for k in self.keys]
         self.prefill_length = 0
         self.prefill_mode = True
 
@@ -87,7 +79,6 @@ def _forward_last(model, token_ids, cache, positions, attention_mask):
 def _decode_last(model, token_ids, cache, positions):
     """Single-token path carries each layer's residual and normalized input."""
     base = model.model
-    set_used_k(cache.used_k, positions)
     residual = base.embed_tokens(token_ids)
     position_ids = positions.unsqueeze(0)
     position_embeddings = base.rotary_emb(residual, position_ids)

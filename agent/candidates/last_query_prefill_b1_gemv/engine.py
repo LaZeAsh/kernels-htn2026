@@ -5,10 +5,10 @@ Copy this directory's contents to submission root only after public validation.
 
 import torch
 from transformers import AutoModelForCausalLM
+from transformers.models.qwen3.modeling_qwen3 import ALL_ATTENTION_FUNCTIONS, rotate_half
 
 from kernels.rmsnorm import rms_norm
 from kernels.residual_norm import add_norm
-from kernels.flash_varlen import set_used_k
 from attention import install_direct_gqa
 
 
@@ -32,17 +32,10 @@ class FixedCache:
 
     def __init__(self, layers, batch, heads, capacity, head_dim):
         self.capacity = capacity
-        # One physical [B,C,8,128] allocation per K/V layer. The logical
-        # [B,8,C,128] views retain the native prefill adapter interface.
-        self.keys_packed = [torch.zeros((batch, capacity, heads, head_dim),
-                                        device="cuda:0", dtype=torch.bfloat16)
-                            for _ in range(layers)]
-        self.values_packed = [torch.zeros_like(k) for k in self.keys_packed]
-        self.keys = [k.permute(0, 2, 1, 3) for k in self.keys_packed]
-        self.values = [v.permute(0, 2, 1, 3) for v in self.values_packed]
-        self.cu_q = torch.arange(batch + 1, device="cuda:0", dtype=torch.int32)
-        self.cu_k = self.cu_q * capacity
-        self.used_k = torch.empty((batch,), device="cuda:0", dtype=torch.int32)
+        self.keys = [torch.zeros((batch, heads, capacity, head_dim),
+                                 device="cuda:0", dtype=torch.bfloat16)
+                     for _ in range(layers)]
+        self.values = [torch.zeros_like(k) for k in self.keys]
         self.prefill_length = 0
         self.prefill_mode = True
 
@@ -64,13 +57,53 @@ class FixedCache:
         return self.prefill_length
 
 
+def _final_last_query_attention(layer, normalized_full, position_embeddings,
+                                cache, positions, attention_mask):
+    """Project one final-layer Q but cache K/V for every prompt position."""
+    attn = layer.self_attn
+    batch, length, _ = normalized_full.shape
+    query = attn.q_norm(
+        attn.q_proj(normalized_full[:, -1:, :].contiguous())
+        .view(batch, 1, 32, 128)
+    ).transpose(1, 2)
+    key = attn.k_norm(
+        attn.k_proj(normalized_full).view(batch, length, 8, 128)
+    ).transpose(1, 2)
+    value = attn.v_proj(normalized_full).view(batch, length, 8, 128).transpose(1, 2)
+    cos, sin = position_embeddings
+    # Keep the pinned rotate_half, BF16 multiply, and BF16 add boundaries.
+    query_cos = cos[:, -1:, :].unsqueeze(1)
+    query_sin = sin[:, -1:, :].unsqueeze(1)
+    query = query * query_cos + rotate_half(query) * query_sin
+    key_cos = cos.unsqueeze(1)
+    key_sin = sin.unsqueeze(1)
+    key = key * key_cos + rotate_half(key) * key_sin
+    key, value = cache.update(
+        key, value, attn.layer_idx,
+        {"sin": sin, "cos": cos, "cache_position": positions},
+    )
+    if attention_mask is None:
+        last_mask = None
+    elif attention_mask.ndim == 4:
+        last_mask = attention_mask[..., -1:, :]
+    else:
+        raise ValueError("final-layer last-query prefill expects a 4D attention mask")
+    attention_interface = ALL_ATTENTION_FUNCTIONS[attn.config._attn_implementation]
+    output, _ = attention_interface(
+        attn, query, key, value, last_mask, dropout=0.0,
+        scaling=attn.scaling, sliding_window=attn.sliding_window,
+        is_causal=False,
+    )
+    return attn.o_proj(output.reshape(batch, 1, 4096).contiguous())
+
+
 @torch.inference_mode()
 def _forward_last(model, token_ids, cache, positions, attention_mask):
     base = model.model
     hidden = base.embed_tokens(token_ids)
     position_ids = positions.unsqueeze(0)
     position_embeddings = base.rotary_emb(hidden, position_ids)
-    for layer in base.layers:
+    for layer in base.layers[:-1]:
         hidden = layer(
             hidden,
             attention_mask=attention_mask,
@@ -80,14 +113,32 @@ def _forward_last(model, token_ids, cache, positions, attention_mask):
             cache_position=positions,
             position_embeddings=position_embeddings,
         )[0]
-    return model.lm_head(base.norm(hidden[:, -1:, :])).argmax(-1)
+    final_layer = base.layers[-1]
+    attention_last = _final_last_query_attention(
+        final_layer,
+        final_layer.input_layernorm(hidden),
+        position_embeddings, cache, positions, attention_mask,
+    )
+    # Final-layer K/V for every prompt token have already filled the cache.
+    # Only the last token's post-attention MLP can affect the returned logits.
+    residual = hidden[:, -1:, :].contiguous()
+    after_attention, mlp_input = add_norm(
+        residual, attention_last,
+        final_layer.post_attention_layernorm.weight,
+        final_layer.post_attention_layernorm.variance_epsilon,
+    )
+    mlp_output = final_layer.mlp(mlp_input)
+    _, normalized = add_norm(
+        after_attention, mlp_output,
+        base.norm.weight, base.norm.variance_epsilon,
+    )
+    return model.lm_head(normalized).argmax(-1)
 
 
 @torch.inference_mode()
 def _decode_last(model, token_ids, cache, positions):
     """Single-token path carries each layer's residual and normalized input."""
     base = model.model
-    set_used_k(cache.used_k, positions)
     residual = base.embed_tokens(token_ids)
     position_ids = positions.unsqueeze(0)
     position_embeddings = base.rotary_emb(residual, position_ids)

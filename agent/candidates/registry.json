@@ -616,24 +616,32 @@
     {
       "id": "v54_prefill_cublaslt_b1_gemv",
       "path": "agent/candidates/prefill_cublaslt_b1_gemv",
-      "disposition": "measuring",
+      "disposition": "rejected",
       "priority": 10,
       "reason": "One-line preferred cuBLASLt setting in initialization on passing 854.042926 B1 GEMV source; affects native prefill and decode BLAS scheduling.",
       "numericalRisk": "hidden correctness, TTFT and score unmeasured for changed native prefill GEMMs",
       "commitSha": "156d8ff8996e3a3d215fed79c2d7ab672b10ab1f",
       "submissionId": "5fddc83e-9509-49d4-9ee3-1f5f994dc673",
-      "runId": "83e9f201-f5d7-4e88-9897-fa3a5b43ec07"
+      "runId": "83e9f201-f5d7-4e88-9897-fa3a5b43ec07",
+      "resultStatus": "passed",
+      "ranked": true,
+      "scoreTokensPerSecond": 840.2841771253366,
+      "rejectionReason": "Correctness passed but score below 854.042926 B1 GEMV baseline."
     },
     {
       "id": "v55_last_token_mlp_prefill_b1_gemv",
       "path": "agent/candidates/last_token_mlp_prefill_b1_gemv",
-      "disposition": "queued",
+      "disposition": "rejected",
       "priority": 15,
       "reason": "Reviewed isolated last-token MLP prefill stage on passing B1 GEMV source; ready after v54 submission.",
       "numericalRisk": "GPU hidden correctness and timing unmeasured",
       "commitSha": "1dd933fa33dfaaab845db686a4b2f59a2552a0ed",
       "submissionId": "42cc91ec-e6e8-4745-9083-f481ea7dce3b",
-      "runId": "adc369ae-bb29-4265-8e1d-7fd9a155267e"
+      "runId": "adc369ae-bb29-4265-8e1d-7fd9a155267e",
+      "resultStatus": "passed",
+      "ranked": true,
+      "scoreTokensPerSecond": 848.1621694586071,
+      "rejectionReason": "Correctness passed but score below 854.042926 B1 GEMV baseline; public TTFT improved 11.3%, 3.0%, 1.8%, so retain as a possible prefill component."
     },
     {
       "id": "v56_prefill_add_norm_b1_gemv",
@@ -659,11 +667,14 @@
     },
     {
       "id": "v60_b2_4_fused_mlp_gemv",
-      "path": "engine",
-      "disposition": "active",
+      "path": "agent/candidates/b2_4_fused_mlp_gemv",
+      "disposition": "queued",
       "priority": 35,
       "reason": "Reviewed B2..4 fused MLP GEMV on passing 854.042926 B1 GEMV source; static unrolled batch reductions, ROWS1/2 by warps4/8, BF16 boundaries retained.",
-      "numericalRisk": "No local Triton compile or GPU run; hidden correctness and performance unmeasured"
+      "numericalRisk": "No local Triton compile or GPU run; hidden correctness and performance unmeasured",
+      "commitSha": "5d7635998676408225090a4592d143df1241604a",
+      "submissionId": "cf8c7b3a-abf8-45d4-aac3-a7313e334a01",
+      "runId": "cbd1e1a3-e5d5-4545-ab17-5b9c9ce86f7e"
     },
     {
       "id": "v58_native_down_column_major_b1_gemv",
@@ -680,6 +691,30 @@
       "priority": 50,
       "reason": "Reviewed B17..64 fused MLP path rebased onto passing 854.042926 B1 GEMV source; B1 winning path preserved, B>64 native fallback.",
       "numericalRisk": "GPU correctness, score and memory unmeasured; B64 partials about 19.9 MB and warm compiler diagnostics"
+    },
+    {
+      "id": "v61_flash_varlen_decode_b1_gemv",
+      "path": "engine",
+      "disposition": "active",
+      "priority": 36,
+      "reason": "Reviewed Flash varlen decode on passing 854.042926 B1 GEMV baseline; time-major KV uses a single cache without a second copy.",
+      "numericalRisk": "GPU hidden correctness, TTFT, TPOT, memory and score unmeasured"
+    },
+    {
+      "id": "v62_prefill_packed_gate_up_b1_gemv",
+      "path": "agent/candidates/prefill_packed_gate_up_b1_gemv",
+      "disposition": "unmeasured",
+      "priority": 37,
+      "reason": "Reviewed prefill packed gate/up projection on passing 854.042926 B1 GEMV source; one packed weight storage per layer and BF16 cast boundaries retained.",
+      "numericalRisk": "GPU hidden correctness and performance unmeasured; changed GEMM scheduling and weight storage"
+    },
+    {
+      "id": "v63_last_query_prefill_b1_gemv",
+      "path": "agent/candidates/last_query_prefill_b1_gemv",
+      "disposition": "unmeasured",
+      "priority": 38,
+      "reason": "Reviewed last-query prefill on correct 848.162169 last-token MLP prefill parent; SDPA output reshape corrected, attention still fills KV for all prompt positions.",
+      "numericalRisk": "GPU hidden correctness and TTFT unmeasured after SDPA reshape fix"
     }
   ]
 }
