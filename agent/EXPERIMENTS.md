@@ -1351,3 +1351,26 @@ prefill GEMM selection as well as decode scheduling; official correctness,
 TTFT and speed remain unmeasured. The separately reviewed
 `last_token_mlp_prefill_b1_gemv` is staged for an isolated experiment after
 this candidate is submitted, with no GPU result yet.
+
+`prefill_add_norm_b1_gemv` is registered as the third reviewed prefill
+experiment at priority 20, after the live prefill cuBLASLt preference and
+staged last-token MLP prefill. Its forward path uses the proven `add_norm`
+with flattened rows and preserves full prompt MLP work. Source review found
+no blocker, but official hidden correctness, TTFT and score are unmeasured.
+It is not live.
+
+## Prefill Lt validating; last-token MLP prefill live
+
+The prefill cuBLASLt candidate was ingested from actual source commit
+`156d8ff8996e3a3d215fed79c2d7ab672b10ab1f` as submission
+`5fddc83e-9509-49d4-9ee3-1f5f994dc673`, official run
+`83e9f201-f5d7-4e88-9897-fa3a5b43ec07`. It was validating when
+recorded; no score or correctness is attributed yet.
+
+The live engine is now the reviewed `last_token_mlp_prefill_b1_gemv` stage.
+For the final prefill layer, attention still processes every prompt token
+and fills its KV cache, while the MLP and final norm process only the last
+token needed for first output. The decode B1 GEMV source is unchanged.
+Hidden correctness, TTFT and score for this prefill change remain
+unmeasured. `prefill_add_norm_b1_gemv` remains staged as the next isolated
+prefill experiment.

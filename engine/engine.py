@@ -62,7 +62,7 @@ def _forward_last(model, token_ids, cache, positions, attention_mask):
     hidden = base.embed_tokens(token_ids)
     position_ids = positions.unsqueeze(0)
     position_embeddings = base.rotary_emb(hidden, position_ids)
-    for layer in base.layers:
+    for layer in base.layers[:-1]:
         hidden = layer(
             hidden,
             attention_mask=attention_mask,
@@ -72,7 +72,29 @@ def _forward_last(model, token_ids, cache, positions, attention_mask):
             cache_position=positions,
             position_embeddings=position_embeddings,
         )[0]
-    return model.lm_head(base.norm(hidden[:, -1:, :])).argmax(-1)
+    final_layer = base.layers[-1]
+    attention_output = final_layer.self_attn(
+        final_layer.input_layernorm(hidden),
+        position_embeddings=position_embeddings,
+        attention_mask=attention_mask,
+        past_key_value=cache,
+        cache_position=positions,
+    )[0]
+    # Final-layer Q/K/V for every prompt token has already filled the cache.
+    # Only the last token's post-attention MLP can affect the returned logits.
+    residual = hidden[:, -1:, :].contiguous()
+    attention_last = attention_output[:, -1:, :].contiguous()
+    after_attention, mlp_input = add_norm(
+        residual, attention_last,
+        final_layer.post_attention_layernorm.weight,
+        final_layer.post_attention_layernorm.variance_epsilon,
+    )
+    mlp_output = final_layer.mlp(mlp_input)
+    _, normalized = add_norm(
+        after_attention, mlp_output,
+        base.norm.weight, base.norm.variance_epsilon,
+    )
+    return model.lm_head(normalized).argmax(-1)
 
 
 @torch.inference_mode()
@@ -125,7 +147,6 @@ class Engine:
             layer.self_attn.q_norm = FusedRMSNorm(layer.self_attn.q_norm)
             layer.self_attn.k_norm = FusedRMSNorm(layer.self_attn.k_norm)
             install_direct_gqa(layer)
-        torch.backends.cuda.preferred_blas_library("cublaslt")
         self._graph_shape = None
         self._cache = None
         self._graph = None

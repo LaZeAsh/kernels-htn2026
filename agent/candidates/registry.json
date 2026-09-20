@@ -615,19 +615,30 @@
     },
     {
       "id": "v54_prefill_cublaslt_b1_gemv",
-      "path": "engine",
-      "disposition": "active",
+      "path": "agent/candidates/prefill_cublaslt_b1_gemv",
+      "disposition": "validating",
       "priority": 10,
       "reason": "One-line preferred cuBLASLt setting in initialization on passing 854.042926 B1 GEMV source; affects native prefill and decode BLAS scheduling.",
-      "numericalRisk": "hidden correctness, TTFT and score unmeasured for changed native prefill GEMMs"
+      "numericalRisk": "hidden correctness, TTFT and score unmeasured for changed native prefill GEMMs",
+      "commitSha": "156d8ff8996e3a3d215fed79c2d7ab672b10ab1f",
+      "submissionId": "5fddc83e-9509-49d4-9ee3-1f5f994dc673",
+      "runId": "83e9f201-f5d7-4e88-9897-fa3a5b43ec07"
     },
     {
       "id": "v55_last_token_mlp_prefill_b1_gemv",
-      "path": "agent/candidates/last_token_mlp_prefill_b1_gemv",
-      "disposition": "unmeasured",
+      "path": "engine",
+      "disposition": "active",
       "priority": 15,
       "reason": "Reviewed isolated last-token MLP prefill stage on passing B1 GEMV source; ready after v54 submission.",
       "numericalRisk": "GPU hidden correctness and timing unmeasured"
+    },
+    {
+      "id": "v56_prefill_add_norm_b1_gemv",
+      "path": "agent/candidates/prefill_add_norm_b1_gemv",
+      "disposition": "unmeasured",
+      "priority": 20,
+      "reason": "Reviewed prefill forward add_norm fusion on passing B1 GEMV source; flattened rows use proven add_norm and full prompt MLP remains.",
+      "numericalRisk": "official hidden correctness, TTFT and score unmeasured"
     }
   ]
 }
