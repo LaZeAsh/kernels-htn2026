@@ -1279,3 +1279,25 @@ and native fallback above 16. The QKV projection is back to the passing
 BM16 source; the QKV BM64 probe remains an independent queued submission.
 GPU compilation, correctness, load budget and speed for this B1 kernel
 remain unmeasured. Window4 fused MLP also remains queued separately.
+
+## Window4 fused and QKV BM64 passed but slower; prompt lookup live
+
+Window4 fused MLP passed official run
+`75e03b21-7e55-42d7-bd27-8c3f7ad4014a` at source commit
+`54c8d65fda0ae25f17fc3fa43bb54c710abda6b1`, scoring 799.328190
+tokens/s, 5.05% below the 841.845837 baseline. QKV BM64 also passed run
+`09c47c49-0f96-4a37-8a58-316d7fc124ac` at commit
+`83836a0e50e59ae8b98cb26a01c40402eb4440da`, scoring 821.209999
+tokens/s, 2.45% below baseline. Both pass correctness but are rejected for
+promotion on speed. Full reports are saved. Official hidden run logs withheld
+all submission stdout, including compiler diagnostics; actual PTX lowering
+cannot be inferred from them. No operator, admin or public-mode workaround
+was used.
+
+B1 GEMV was accepted as submission `4d27e436-fc10-4d67-befc-ae8e5f94be1c`,
+official run `dbccd645-6ea3-4c62-af0a-f5a8e6505629`, actual commit
+`a4ed38eb83474e08e104dc45300ae9c18f7dd960`; it was validating when
+recorded. The live engine is now `window4_prompt_lookup`, a separate test of
+prompt-local proposals on the correct but slower window4 fused MLP base.
+Its full-model acceptance/cache and all kernels remain unchanged. GPU
+acceptance benefit, correctness and speed remain unmeasured.
